@@ -39,8 +39,10 @@ button,select{font:inherit;color:inherit}
 .tourbar h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:32px;letter-spacing:.02em;line-height:1}
 .tourbar .kick{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.9;margin-bottom:4px}
 .tourbar .meta{font-size:12px;opacity:.75;margin-top:4px}
-.drip{position:absolute;right:-20px;top:-26px;width:300px;opacity:.9;mix-blend-mode:screen;pointer-events:none}
-.tourbar .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;z-index:1;flex-wrap:wrap;justify-content:flex-end}
+.drip{position:absolute;right:-20px;top:-26px;width:300px;opacity:.55;mix-blend-mode:screen;pointer-events:none;z-index:0}
+.tourbar .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;z-index:2;flex-wrap:wrap;justify-content:flex-end;background:rgba(26,25,23,.88);border-radius:999px;padding:5px 6px 5px 12px;max-width:100%}
+.tourbar .who select{max-width:180px}
+#editToggle{font-weight:600;background:#fff;color:#1a1917;border-color:#fff}
 .drip{z-index:0}
 .tourbar select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;padding:6px 12px}
 .tabs{display:flex;gap:6px;padding:6px 14px 10px;background:#1a1917;overflow-x:auto}
@@ -147,7 +149,7 @@ h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 
 /* edit mode, modal, install banner */
 .hbtn{color:#fff;font-size:13px;background:transparent;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 12px;cursor:pointer;text-decoration:none}
 .hbtn:hover{background:rgba(255,255,255,.12)}
-.hbtn.on{background:#fff;color:var(--ink);border-color:#fff}
+.hbtn.on{background:#1a1917;color:#fff;border-color:#fff}
 .editbar{display:none;background:var(--ink);color:#fff;font-size:13px;padding:8px 16px;align-items:center;gap:10px;flex-wrap:wrap}
 body.editing .editbar{display:flex}
 .ed{display:none;border:1px solid var(--line);background:var(--card);border-radius:999px;font-size:12px;padding:3px 10px;cursor:pointer;color:var(--ink)}
@@ -319,11 +321,14 @@ const hotelFor=s=>D.Hotels.find(h=>h.checkin&&h.checkout&&h.checkin<=s&&s<h.chec
 function dayKind(s){const sh=showsOn(s).length,tr=travelOn(s).length;return sh&&tr?["both","Travel + Show"]:sh?["show","Show"]:tr?["travel","Travel"]:["off","Off"]}
 function mapLink(name,map,addr){const q=map||("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([name,addr].filter(Boolean).join(" ")));return `<a href="${esc(q)}" target="_blank" rel="noopener">เปิดแผนที่</a>`}
 const idx=(t,o)=>D[t].indexOf(o);
+const linkify=s=>esc(s).replace(/(https?:\/\/[^\s<]+)/g,u=>`<a href="${u}" target="_blank" rel="noopener">${/maps\.app|goo\.gl\/maps|google\.com\/maps/.test(u)?"แผนที่":"ลิงก์"}</a>`);
 const realCrew=()=>D.Crew.filter(c=>!/^\(/.test(c.name));
 function crewFor(shows){const names=new Set();let any=false;
   shows.forEach(s=>{const l=(s.crew||"").split(",").map(x=>x.trim()).filter(Boolean);if(l.length){any=true;l.forEach(n=>names.add(n))}});
   if(!any)return {list:realCrew(),custom:false};
-  return {list:realCrew().filter(c=>names.has(c.short)||names.has(c.name)),custom:true};}
+  const known=realCrew().filter(c=>names.has(c.short)||names.has(c.name));const kn=new Set(known.flatMap(c=>[c.short,c.name]));
+  const extra=[...names].filter(n=>!kn.has(n)).map(n=>({name:n,short:n,role:"",group:"",_extra:true}));
+  return {list:[...known,...extra],custom:true};}
 const edBtn=(t,o,label="✎ แก้")=>`<button class="ed" type="button" data-edit="${t}" data-i="${idx(t,o)}">${label}</button>`;
 const addBtn=(t,label,preset)=>`<button class="ed" type="button" data-add="${t}" data-preset="${esc(JSON.stringify(preset||{}))}">${label}</button>`;
 
@@ -350,7 +355,7 @@ function renderDay(s){
     <div class="sub">${esc([x.venue,x.city].filter(Boolean).join(" · "))}${x.address?"<br>"+esc(x.address):""}</div>
     <div class="sub" style="margin-top:4px">${x.setTime?`ขึ้นโชว์ <b class="mono">${esc(x.setTime)}</b>${x.setLen?" · "+esc(x.setLen)+" นาที":""}`:`<span class="waiting">เวลาโชว์: รอข้อมูล</span>`}</div>
     ${x.others?`<div class="sub">ร่วมเวที: ${esc(x.others)}</div>`:""}${x.contact?`<div class="sub">ผู้ติดต่อ: ${esc(x.contact)} ${esc(x.contactPhone)}</div>`:""}
-    <div class="sub">${mapLink(x.venue||x.name,x.map,[x.address,x.city].join(" "))}</div>${x.notes?`<div class="sub" style="margin-top:4px">${esc(x.notes)}</div>`:""}</div>`});
+    <div class="sub">${mapLink(x.venue||x.name,x.map,[x.address,x.city].join(" "))}</div>${x.notes?`<div class="sub" style="margin-top:4px">${linkify(x.notes)}</div>`:""}</div>`});
   L+=`<div class="box travel"><div class="boxhead"><h3>Travel</h3>${addBtn("Travel","+ เพิ่ม",{date:s,showId})}</div>`;
   if(tr.length){L+=`<div class="big">${tr.length} เที่ยว · ${esc(route)}</div>`+tr.map(r=>`<div class="leg"><div class="boxhead"><span><b>${esc(strip(r.no)||TT[r.type]||r.type)}</b> <span class="sub">${esc(TT[r.type]||r.type)}</span></span>${edBtn("Travel",r)}</div><span class="mono">${esc(r.from)} ${esc(r.dep)} → ${esc(r.to)} ${esc(r.arr)}</span> · ${esc(r.who||"ทุกคน")}${r.driver?`<br><span class="sub">คนขับ ${esc(r.driver)} ${esc(r.driverPhone)}</span>`:""}${r.pickup?`<br><span class="sub">จุดรับ: ${esc(r.pickup)}</span>`:""}</div>`).join("")}
   else L+=`<div class="sub">ไม่มีการเดินทางวันนี้</div>`;
@@ -360,7 +365,7 @@ function renderDay(s){
   const links=D.Links.filter(l=>sh.some(x=>x.id===l.showId));
   if(links.length)L+=`<div class="box"><h3>Docs</h3>${links.map(l=>`<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(l.label)}</span>${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">เปิด</a>`:`<span class="waiting">รอลิงก์</span>`}</div>`).join("")}</div>`;
   const cf=crewFor(sh);
-  L+=`<div class="box"><div class="boxhead"><h3>Crew · ${cf.list.length}${cf.custom?" (ทีมงานนี้)":""}</h3><span>${sh.length?`<button class="ed" type="button" data-crewpick="${idx("Shows",sh[0])}">✎ เลือกทีมงานนี้</button>`:""}${addBtn("Crew","+ เพิ่มคน",{group:"Crew"})}</span></div><div class="chips">${cf.list.map(c=>editing()?`<button type="button" class="chip" data-edit="Crew" data-i="${idx("Crew",c)}" title="แก้ข้อมูล ${esc(c.short||c.name)}">✎ ${esc(c.short||c.name)}</button>`:`<span class="chip${me()&&(c.name===me())?" me":""}" title="${esc(c.role)}">${esc(c.short||c.name)}</span>`).join("")||'<span class="sub">ยังไม่ได้เลือกคน</span>'}</div>${cf.custom&&!editing()?"":""}</div>`;
+  L+=`<div class="box"><div class="boxhead"><h3>Crew · ${cf.list.length}${cf.custom?" (ทีมงานนี้)":""}</h3><span>${sh.length?`<button class="ed" type="button" data-crewpick="${idx("Shows",sh[0])}">✎ เลือกทีมงานนี้</button>`:""}${addBtn("Crew","+ เพิ่มคน",{group:"Crew"})}</span></div><div class="chips">${cf.list.map(c=>editing()&&!c._extra?`<button type="button" class="chip" data-edit="Crew" data-i="${idx("Crew",c)}" title="แก้ข้อมูล ${esc(c.short||c.name)}">✎ ${esc(c.short||c.name)}</button>`:`<span class="chip${me()&&(c.name===me())?" me":""}" title="${esc(c.role)}">${esc(c.short||c.name)}</span>`).join("")||'<span class="sub">ยังไม่ได้เลือกคน</span>'}</div>${cf.custom&&!editing()?"":""}</div>`;
   L+=`</div>`;
 
   const items=D.Schedule.filter(r=>r.date===s).sort((a,b)=>(mins(a.time)??9999)-(mins(b.time)??9999));
@@ -376,7 +381,7 @@ function renderDay(s){
       if(prev&&ok&&m!=null){const g=m-prev.m;if(g>=60)L+=`<div class="gap">อีก ${dur(g)} ถึง ${esc(strip(r.item))}</div>`}
       const ppl=(r.who||"").split(",").map(x=>x.trim()).filter(Boolean);
       L+=`<div class="mo c-${esc(CATS.includes(r.cat)?r.cat:"Other")}${ok?"":" dim"}"><div class="tm">${esc(r.time||"–")}${r.end?`<small>ถึง ${esc(r.end)}</small>`:""}</div>
-        <div><div class="ti">${esc(strip(r.item))}</div>${r.loc?`<div class="lc">${esc(r.loc)}</div>`:""}${r.notes?`<div class="lc">${esc(r.notes)}</div>`:""}
+        <div><div class="ti">${esc(strip(r.item))}</div>${r.loc?`<div class="lc">${linkify(r.loc)}</div>`:""}${r.notes?`<div class="lc">${linkify(r.notes)}</div>`:""}
         <div class="ppl">${ppl.map(x=>`<span class="${isMeTok(x)?"me":""}">${esc(x)}</span>`).join("")}</div></div>
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
