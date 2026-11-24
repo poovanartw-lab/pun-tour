@@ -196,6 +196,13 @@ body.editing button.chip{cursor:pointer}body.editing button.chip:hover{border-co
 .pwarn{margin-top:10px;font-size:12px;color:var(--muted)}
 #pModal .sheet{max-width:760px}
 @media (max-width:640px){.prow{grid-template-columns:22px 60px 60px 1fr}.prow .pin-c,.prow .pin-w{grid-column:2/-1}}
+.box.setlist .sl{display:grid;grid-template-columns:24px 1fr auto auto;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line)}
+.box.setlist .sl:last-child{border-bottom:0}
+.sl-n{font-weight:600;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.sl-s{font-weight:600}.sl-s small{font-weight:400;color:var(--muted)}
+.sl-k{font-size:12px;font-weight:600;background:var(--ink);color:#fff;border-radius:999px;padding:1px 9px}
+.sl.seg{grid-template-columns:1fr auto;font-size:12px;color:var(--muted);text-align:center}
+.sl.seg span{display:flex;align-items:center;gap:8px}.sl.seg span::before,.sl.seg span::after{content:"";flex:1;border-top:1px dashed var(--line)}
 .tourbar{padding-top:max(16px,env(safe-area-inset-top))}
 </style>
 </head>
@@ -246,7 +253,7 @@ body.editing button.chip{cursor:pointer}body.editing button.chip:hover{border-co
 const CONFIG = { API: (window.PUN_API||"").trim(), SHEET_URL: "https://docs.google.com/spreadsheets/d/1_rbN1QnNus-q8VO694cj5tmxW3bLWBd4SfufwiURBgY/edit" };
 const SNAPSHOT = null;
 const SNAPSHOT_TIME = "";
-const TABS = ["Shows","Schedule","Travel","Hotels","Crew","Links"];
+const TABS = ["Shows","Schedule","Travel","Hotels","Crew","Links","Setlist"];
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -258,7 +265,8 @@ const KEYS = {
   Travel:["id","showId","date","type","no","from","to","dep","arr","who","driver","driverPhone","pickup","ref","notes"],
   Hotels:["id","showId","name","address","phone","checkin","checkout","map","rooms","notes"],
   Crew:["name","short","role","group","phone","line","passport","notes"],
-  Links:["showId","label","url","notes"]
+  Links:["showId","label","url","notes"],
+  Setlist:["showId","seq","no","song","key","ver","notes"]
 };
 const CATS = ["Lobby","Van","Flight","Airport","Hotel","Show","Soundcheck","Meal","Press","Other"];
 const FIELDS = {
@@ -267,8 +275,9 @@ const FIELDS = {
   Hotels:[["id","รหัส","auto:H"],["showId","งาน","show"],["name","ชื่อโรงแรม","text",1],["address","ที่อยู่","text",1],["phone","เบอร์โรงแรม","tel"],["map","ลิงก์แผนที่","url"],["checkin","เช็กอิน","date"],["checkout","เช็กเอาต์","date"],["rooms","ห้อง / ใครพัก","text",1],["notes","หมายเหตุ","text",1]],
   Shows:[["id","รหัส","auto:S"],["status","สถานะ","sel:Confirmed,TBC,Cancelled"],["date","วันที่","date"],["endDate","ถึงวันที่ (ถ้าหลายวัน)","date"],["name","ชื่องาน","text",1],["type","ประเภท","sel:Show,Festival,Pub,Event,Private"],["venue","Venue","text"],["city","เมือง","text"],["address","ที่อยู่","text",1],["map","ลิงก์แผนที่","url",1],["setTime","เวลาขึ้นโชว์","time"],["setLen","ความยาว (นาที)","number"],["others","ศิลปินร่วมเวที","text",1],["contact","ผู้ติดต่อหน้างาน","text"],["contactPhone","เบอร์ผู้ติดต่อ","tel"],["hotelId","Hotel ID","text"],["notes","หมายเหตุ","text",1],["crew","ทีมที่ไปงานนี้ (ไม่เลือก = ทุกคน)","crew",1]]
 };
+FIELDS.Setlist=[["showId","งาน","show"],["seq","ลำดับในลิสต์","number"],["no","เลขเพลง (ว่าง = ช่วงพูด/คั่น)","text"],["song","ชื่อเพลง / ช่วง","text",1],["key","คีย์","text"],["ver","เวอร์ชัน","text"],["notes","หมายเหตุ","text",1]];
 FIELDS.Crew=[["name","ชื่อ (ชื่อจริงหรือชื่อเล่น)","text",1],["short","ชื่อที่โชว์ในเว็บ","text"],["group","กลุ่ม","sel:Band,Crew,Management,Artist"],["role","ตำแหน่ง","text",1],["notes","หมายเหตุ","text",1]];
-const TITLES = {Schedule:"คิวเวลา",Travel:"การเดินทาง",Hotels:"โรงแรม",Shows:"งาน",Crew:"คนในทีม"};
+const TITLES = {Setlist:"เพลง",Schedule:"คิวเวลา",Travel:"การเดินทาง",Hotels:"โรงแรม",Shows:"งาน",Crew:"คนในทีม"};
 
 let D = null, SOURCE = "", LIVE = false;
 
@@ -336,6 +345,8 @@ function dayKind(s){const sh=showsOn(s).length,tr=travelOn(s).length;return sh&&
 function mapLink(name,map,addr){const q=map||("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([name,addr].filter(Boolean).join(" ")));return `<a href="${esc(q)}" target="_blank" rel="noopener">เปิดแผนที่</a>`}
 const idx=(t,o)=>D[t].indexOf(o);
 const linkify=s=>esc(s).replace(/(https?:\/\/[^\s<]+)/g,u=>`<a href="${u}" target="_blank" rel="noopener">${/maps\.app|goo\.gl\/maps|google\.com\/maps/.test(u)?"แผนที่":"ลิงก์"}</a>`);
+const setlistOf=id=>D.Setlist.filter(x=>x.showId===id).sort((a,b)=>(parseFloat(a.seq)||0)-(parseFloat(b.seq)||0));
+const nextSeq=id=>String(Math.max(0,...setlistOf(id).map(x=>parseFloat(x.seq)||0))+1).padStart(2,"0");
 const realCrew=()=>D.Crew.filter(c=>!/^\(/.test(c.name));
 function crewFor(shows){const names=new Set();let any=false;
   shows.forEach(s=>{const l=(s.crew||"").split(",").map(x=>x.trim()).filter(Boolean);if(l.length){any=true;l.forEach(n=>names.add(n))}});
@@ -370,6 +381,8 @@ function renderDay(s){
     <div class="sub" style="margin-top:4px">${x.setTime?`ขึ้นโชว์ <b class="mono">${esc(x.setTime)}</b>${x.setLen?" · "+esc(x.setLen)+" นาที":""}`:`<span class="waiting">เวลาโชว์: รอข้อมูล</span>`}</div>
     ${x.others?`<div class="sub">ร่วมเวที: ${esc(x.others)}</div>`:""}${x.contact?`<div class="sub">ผู้ติดต่อ: ${esc(x.contact)} ${esc(x.contactPhone)}</div>`:""}
     <div class="sub">${mapLink(x.venue||x.name,x.map,[x.address,x.city].join(" "))}</div>${x.notes?`<div class="sub" style="margin-top:4px">${linkify(x.notes)}</div>`:""}</div>`});
+  sh.forEach(x=>{const sl=setlistOf(x.id);if(!sl.length&&!editing())return;const songs=sl.filter(r=>r.no).length;
+    L+=`<div class="box setlist"><div class="boxhead"><h3>Setlist${sh.length>1?" · "+esc(x.name):""} · ${songs} เพลง</h3>${addBtn("Setlist","+ เพิ่ม",{showId:x.id,seq:nextSeq(x.id)})}</div>${sl.map(r=>r.no?`<div class="sl"><span class="sl-n">${esc(r.no)}</span><span class="sl-s">${esc(r.song)}${r.ver?` <small>${esc(r.ver)}</small>`:""}${r.notes?` <small>· ${esc(r.notes)}</small>`:""}</span>${r.key?`<span class="sl-k">${esc(r.key)}</span>`:""}${edBtn("Setlist",r,"✎")}</div>`:`<div class="sl seg"><span>${/^[—–-]+$/.test(r.song)?"":esc(r.song)}</span>${edBtn("Setlist",r,"✎")}</div>`).join("")||'<div class="sub">ยังไม่มีลิสต์เพลง</div>'}</div>`});
   L+=`<div class="box travel"><div class="boxhead"><h3>Travel</h3>${addBtn("Travel","+ เพิ่ม",{date:s,showId})}</div>`;
   if(tr.length){L+=`<div class="big">${tr.length} เที่ยว · ${esc(route)}</div>`+tr.map(r=>`<div class="leg"><div class="boxhead"><span><b>${esc(strip(r.no)||TT[r.type]||r.type)}</b> <span class="sub">${esc(TT[r.type]||r.type)}</span></span>${edBtn("Travel",r)}</div><span class="mono">${esc(r.from)} ${esc(r.dep)} → ${esc(r.to)} ${esc(r.arr)}</span> · ${esc(r.who||"ทุกคน")}${r.driver?`<br><span class="sub">คนขับ ${esc(r.driver)} ${esc(r.driverPhone)}</span>`:""}${r.pickup?`<br><span class="sub">จุดรับ: ${esc(r.pickup)}</span>`:""}</div>`).join("")}
   else L+=`<div class="sub">ไม่มีการเดินทางวันนี้</div>`;
@@ -417,6 +430,7 @@ function renderVenues(){const t=todayISO();const rows=[...D.Shows].sort((a,b)=>a
 function copyDay(s,sh,items){const L=[`📅 ${dt(s).toLocaleDateString("th-TH",{weekday:"long",day:"numeric",month:"long"})}`];
   sh.forEach(x=>L.push(`🎤 ${x.name}${x.venue?" @ "+x.venue:""}${x.city?" ("+x.city+")":""}${x.setTime?" ขึ้น "+x.setTime:""}`));
   const ht=hotelFor(s);if(ht)L.push(`🛏 ${strip(ht.name)}`);
+  sh.forEach(x=>{const sl=setlistOf(x.id);if(sl.length){L.push("🎵 Setlist");sl.forEach(r=>L.push(r.no?`  ${r.no}. ${r.song}${r.key?" ("+r.key+")":""}${r.ver?" "+r.ver:""}`:(/^[—–-]+$/.test(r.song)?"  ———":`  — ${r.song} —`)))}});
   if(sh.length){const cf=crewFor(sh);if(cf.custom)L.push(`👥 ${cf.list.map(c=>c.short||c.name).join(", ")}`)}
   travelOn(s).filter(r=>matches(r.who)).forEach(r=>L.push(`🚐 ${TT[r.type]||r.type} ${r.from}→${r.to} ${r.dep}${r.arr?"-"+r.arr:""} ${strip(r.no)}${r.driver?" คนขับ "+r.driver+" "+r.driverPhone:""}`.trim()));
   L.push("");items.filter(r=>matches(r.who)).forEach(r=>L.push(`${r.time||"--:--"}  ${strip(r.item)}${r.who&&r.who!=="ทุกคน"?" ["+r.who+"]":""}${r.loc?" @ "+r.loc:""}`));
