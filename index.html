@@ -40,7 +40,8 @@ button,select{font:inherit;color:inherit}
 .tourbar .kick{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.9;margin-bottom:4px}
 .tourbar .meta{font-size:12px;opacity:.75;margin-top:4px}
 .drip{position:absolute;right:-20px;top:-26px;width:300px;opacity:.9;mix-blend-mode:screen;pointer-events:none}
-.tourbar .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;z-index:1}
+.tourbar .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;z-index:1;flex-wrap:wrap;justify-content:flex-end}
+.drip{z-index:0}
 .tourbar select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;padding:6px 12px}
 .tabs{display:flex;gap:6px;padding:6px 14px 10px;background:#1a1917;overflow-x:auto}
 .tab{background:rgba(255,255,255,.08);color:#e9e6df;border:0;border-radius:999px;padding:7px 14px;font-weight:500;font-size:13px;cursor:pointer;display:flex;gap:6px;align-items:center;white-space:nowrap}
@@ -86,7 +87,7 @@ main{padding:20px 22px 48px;min-width:0}
 .leg{background:var(--panel);padding:9px 11px;margin-top:6px;border-radius:12px}
 .leg b{font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
-.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 10px;font-size:12px}
+.chip{font:inherit;font-size:12px;cursor:default;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 10px;font-size:12px}
 .chip.me{background:var(--ink);color:#fff}
 .waiting{font-weight:500;color:var(--muted);font-style:italic}
 .sched{border:1px solid var(--line);background:var(--card);padding:14px 16px;border-radius:20px;box-shadow:var(--shadow)}
@@ -151,6 +152,7 @@ h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 
 body.editing .editbar{display:flex}
 .ed{display:none;border:1px solid var(--line);background:var(--card);border-radius:999px;font-size:12px;padding:3px 10px;cursor:pointer;color:var(--ink)}
 body.editing .ed{display:inline-flex;align-items:center;gap:4px}
+body.editing button.chip{cursor:pointer}body.editing button.chip:hover{border-color:var(--ink)}
 .ed:hover{border-color:var(--ink)}
 .c-Show .ed,.c-Soundcheck .ed,.box.show .ed{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)}
 .mo .side-col{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
@@ -235,7 +237,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}, del(k){try{localStorage.removeItem(k)}catch(e){}} };
 
 const KEYS = {
-  Shows:["id","date","endDate","name","type","venue","city","address","map","setTime","setLen","others","contact","contactPhone","hotelId","status","notes"],
+  Shows:["id","date","endDate","name","type","venue","city","address","map","setTime","setLen","others","contact","contactPhone","hotelId","status","notes","crew"],
   Schedule:["showId","date","time","end","item","cat","who","loc","notes"],
   Travel:["id","showId","date","type","no","from","to","dep","arr","who","driver","driverPhone","pickup","ref","notes"],
   Hotels:["id","showId","name","address","phone","checkin","checkout","map","rooms","notes"],
@@ -247,9 +249,10 @@ const FIELDS = {
   Schedule:[["showId","งาน","show"],["date","วันที่","date"],["time","เวลา","time"],["end","ถึงเวลา","time"],["item","รายการ","text",1],["cat","ประเภท","sel:"+CATS.join(",")],["loc","สถานที่","text"],["who","ใครเกี่ยวข้อง","who",1],["notes","หมายเหตุ","text",1]],
   Travel:[["id","รหัส","auto:T"],["showId","งาน","show"],["date","วันที่","date"],["type","ประเภท","sel:Flight,Van,Car,Bus,Train,Boat"],["no","เลขไฟลต์ / ทะเบียนรถ","text",1],["from","จาก","text"],["to","ไป","text"],["dep","ออก","time"],["arr","ถึง","time"],["who","ใครไปเที่ยวนี้","who",1],["driver","คนขับ","text"],["driverPhone","เบอร์คนขับ","tel"],["pickup","จุดรับ","text",1],["ref","Booking ref","text"],["notes","หมายเหตุ","text"]],
   Hotels:[["id","รหัส","auto:H"],["showId","งาน","show"],["name","ชื่อโรงแรม","text",1],["address","ที่อยู่","text",1],["phone","เบอร์โรงแรม","tel"],["map","ลิงก์แผนที่","url"],["checkin","เช็กอิน","date"],["checkout","เช็กเอาต์","date"],["rooms","ห้อง / ใครพัก","text",1],["notes","หมายเหตุ","text",1]],
-  Shows:[["id","รหัส","auto:S"],["status","สถานะ","sel:Confirmed,TBC,Cancelled"],["date","วันที่","date"],["endDate","ถึงวันที่ (ถ้าหลายวัน)","date"],["name","ชื่องาน","text",1],["type","ประเภท","sel:Show,Festival,Pub,Event,Private"],["venue","Venue","text"],["city","เมือง","text"],["address","ที่อยู่","text",1],["map","ลิงก์แผนที่","url",1],["setTime","เวลาขึ้นโชว์","time"],["setLen","ความยาว (นาที)","number"],["others","ศิลปินร่วมเวที","text",1],["contact","ผู้ติดต่อหน้างาน","text"],["contactPhone","เบอร์ผู้ติดต่อ","tel"],["hotelId","Hotel ID","text"],["notes","หมายเหตุ","text",1]]
+  Shows:[["id","รหัส","auto:S"],["status","สถานะ","sel:Confirmed,TBC,Cancelled"],["date","วันที่","date"],["endDate","ถึงวันที่ (ถ้าหลายวัน)","date"],["name","ชื่องาน","text",1],["type","ประเภท","sel:Show,Festival,Pub,Event,Private"],["venue","Venue","text"],["city","เมือง","text"],["address","ที่อยู่","text",1],["map","ลิงก์แผนที่","url",1],["setTime","เวลาขึ้นโชว์","time"],["setLen","ความยาว (นาที)","number"],["others","ศิลปินร่วมเวที","text",1],["contact","ผู้ติดต่อหน้างาน","text"],["contactPhone","เบอร์ผู้ติดต่อ","tel"],["hotelId","Hotel ID","text"],["notes","หมายเหตุ","text",1],["crew","ทีมที่ไปงานนี้ (ไม่เลือก = ทุกคน)","crew",1]]
 };
-const TITLES = {Schedule:"คิวเวลา",Travel:"การเดินทาง",Hotels:"โรงแรม",Shows:"งาน"};
+FIELDS.Crew=[["name","ชื่อ (ชื่อจริงหรือชื่อเล่น)","text",1],["short","ชื่อที่โชว์ในเว็บ","text"],["group","กลุ่ม","sel:Band,Crew,Management,Artist"],["role","ตำแหน่ง","text",1],["notes","หมายเหตุ","text",1]];
+const TITLES = {Schedule:"คิวเวลา",Travel:"การเดินทาง",Hotels:"โรงแรม",Shows:"งาน",Crew:"คนในทีม"};
 
 let D = null, SOURCE = "", LIVE = false;
 
@@ -316,6 +319,11 @@ const hotelFor=s=>D.Hotels.find(h=>h.checkin&&h.checkout&&h.checkin<=s&&s<h.chec
 function dayKind(s){const sh=showsOn(s).length,tr=travelOn(s).length;return sh&&tr?["both","Travel + Show"]:sh?["show","Show"]:tr?["travel","Travel"]:["off","Off"]}
 function mapLink(name,map,addr){const q=map||("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([name,addr].filter(Boolean).join(" ")));return `<a href="${esc(q)}" target="_blank" rel="noopener">เปิดแผนที่</a>`}
 const idx=(t,o)=>D[t].indexOf(o);
+const realCrew=()=>D.Crew.filter(c=>!/^\(/.test(c.name));
+function crewFor(shows){const names=new Set();let any=false;
+  shows.forEach(s=>{const l=(s.crew||"").split(",").map(x=>x.trim()).filter(Boolean);if(l.length){any=true;l.forEach(n=>names.add(n))}});
+  if(!any)return {list:realCrew(),custom:false};
+  return {list:realCrew().filter(c=>names.has(c.short)||names.has(c.name)),custom:true};}
 const edBtn=(t,o,label="✎ แก้")=>`<button class="ed" type="button" data-edit="${t}" data-i="${idx(t,o)}">${label}</button>`;
 const addBtn=(t,label,preset)=>`<button class="ed" type="button" data-add="${t}" data-preset="${esc(JSON.stringify(preset||{}))}">${label}</button>`;
 
@@ -351,7 +359,8 @@ function renderDay(s){
   L+=`<div class="box hotel"><div class="boxhead"><h3>Hotel tonight</h3>${ht?edBtn("Hotels",ht):addBtn("Hotels","+ เพิ่ม",{checkin:s,showId})}</div>${ht?`<div class="big">${esc(strip(ht.name))}</div><div class="sub">${esc(ht.address)}</div>${ht.phone?`<div class="sub">โทร: ${esc(ht.phone)}</div>`:""}${ht.rooms?`<div class="sub">${esc(ht.rooms)}</div>`:""}<div class="sub">${mapLink(ht.name,ht.map,ht.address)}</div>`:`<div class="sub">${sh.length?'<span class="waiting">รอข้อมูล</span> หรือไม่ได้ค้างคืน':"ไม่มี"}</div>`}</div>`;
   const links=D.Links.filter(l=>sh.some(x=>x.id===l.showId));
   if(links.length)L+=`<div class="box"><h3>Docs</h3>${links.map(l=>`<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(l.label)}</span>${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">เปิด</a>`:`<span class="waiting">รอลิงก์</span>`}</div>`).join("")}</div>`;
-  L+=`<div class="box"><h3>Crew · ${D.Crew.length}</h3><div class="chips">${D.Crew.map(c=>`<span class="chip${me()&&(c.name===me())?" me":""}" title="${esc(c.role)}">${esc(c.short||c.name)}</span>`).join("")}</div></div>`;
+  const cf=crewFor(sh);
+  L+=`<div class="box"><div class="boxhead"><h3>Crew · ${cf.list.length}${cf.custom?" (ทีมงานนี้)":""}</h3><span>${sh.length?`<button class="ed" type="button" data-crewpick="${idx("Shows",sh[0])}">✎ เลือกทีมงานนี้</button>`:""}${addBtn("Crew","+ เพิ่มคน",{group:"Crew"})}</span></div><div class="chips">${cf.list.map(c=>editing()?`<button type="button" class="chip" data-edit="Crew" data-i="${idx("Crew",c)}" title="แก้ข้อมูล ${esc(c.short||c.name)}">✎ ${esc(c.short||c.name)}</button>`:`<span class="chip${me()&&(c.name===me())?" me":""}" title="${esc(c.role)}">${esc(c.short||c.name)}</span>`).join("")||'<span class="sub">ยังไม่ได้เลือกคน</span>'}</div>${cf.custom&&!editing()?"":""}</div>`;
   L+=`</div>`;
 
   const items=D.Schedule.filter(r=>r.date===s).sort((a,b)=>(mins(a.time)??9999)-(mins(b.time)??9999));
@@ -389,6 +398,7 @@ function renderVenues(){const t=todayISO();const rows=[...D.Shows].sort((a,b)=>a
 function copyDay(s,sh,items){const L=[`📅 ${dt(s).toLocaleDateString("th-TH",{weekday:"long",day:"numeric",month:"long"})}`];
   sh.forEach(x=>L.push(`🎤 ${x.name}${x.venue?" @ "+x.venue:""}${x.city?" ("+x.city+")":""}${x.setTime?" ขึ้น "+x.setTime:""}`));
   const ht=hotelFor(s);if(ht)L.push(`🛏 ${strip(ht.name)}`);
+  if(sh.length){const cf=crewFor(sh);if(cf.custom)L.push(`👥 ${cf.list.map(c=>c.short||c.name).join(", ")}`)}
   travelOn(s).filter(r=>matches(r.who)).forEach(r=>L.push(`🚐 ${TT[r.type]||r.type} ${r.from}→${r.to} ${r.dep}${r.arr?"-"+r.arr:""} ${strip(r.no)}${r.driver?" คนขับ "+r.driver+" "+r.driverPhone:""}`.trim()));
   L.push("");items.filter(r=>matches(r.who)).forEach(r=>L.push(`${r.time||"--:--"}  ${strip(r.item)}${r.who&&r.who!=="ทุกคน"?" ["+r.who+"]":""}${r.loc?" @ "+r.loc:""}`));
   L.push("","ตารางเต็ม: "+location.href.split("#")[0]+"#d-"+s);const text=L.join("\n");
@@ -402,28 +412,30 @@ const editing=()=>document.body.classList.contains("editing");
 async function enterEdit(){
   if(!LIVE){toast(CONFIG.API&&!CONFIG.API.startsWith("__")?"ยังเชื่อม Sheet ไม่ได้ ลองรีเฟรชอีกครั้ง":"ยังไม่ได้เชื่อม Sheet จึงแก้ไขไม่ได้");return}
   let pin=store.get("pun-pin");
-  if(!pin){ openForm({title:"ใส่ PIN เพื่อแก้ไข",fields:[["pin","PIN","pin",1]],values:{},onSave:async v=>{await post({pin:v.pin,action:"ping"});store.set("pun-pin",v.pin);document.body.classList.add("editing");$("#editToggle").classList.add("on");toast("เข้าโหมดแก้ไขแล้ว")}}); return; }
-  document.body.classList.add("editing");$("#editToggle").classList.add("on");
+  if(!pin){ openForm({title:"ใส่ PIN เพื่อแก้ไข",fields:[["pin","PIN","pin",1]],values:{},onSave:async v=>{await post({pin:v.pin,action:"ping"});store.set("pun-pin",v.pin);document.body.classList.add("editing");$("#editToggle").classList.add("on");render();toast("เข้าโหมดแก้ไขแล้ว")}}); return; }
+  document.body.classList.add("editing");$("#editToggle").classList.add("on");render();
 }
-function exitEdit(){document.body.classList.remove("editing");$("#editToggle").classList.remove("on")}
+function exitEdit(){document.body.classList.remove("editing");$("#editToggle").classList.remove("on");render()}
 
 function nextId(tab,prefix){let n=0;D[tab].forEach(o=>{const m=new RegExp("^"+prefix+"(\\d+)$").exec(o.id||"");if(m)n=Math.max(n,+m[1])});return prefix+pad(n+1)}
 
-let FORM=null;
+let FORM=null, FORM_SHOW="";
 function fieldHtml(f,val){
   const [k,label,type,full]=f; const id="f_"+k; const cls="f"+(full?" full":"");
   if(type==="show") return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}"><option value="">-</option>${[...D.Shows].sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`<option value="${esc(s.id)}"${s.id===val?" selected":""}>${esc(s.id)} · ${fShort(s.date)} · ${esc(s.name)}</option>`).join("")}</select></div>`;
   if(type.startsWith("sel:")) return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}">${type.slice(4).split(",").map(o=>`<option value="${o}"${o===val?" selected":""}>${k==="cat"?CATLAB[o]+" ("+o+")":o}</option>`).join("")}</select></div>`;
-  if(type==="who"){const toks=["ทุกคน","Artist","Band","Crew","Management",...D.Crew.filter(c=>!/^\(/.test(c.name)).map(c=>c.short||c.name)];
+  if(type==="who"){const sid=$("#f_showId")?.value||FORM_SHOW;const shw=D.Shows.find(s=>s.id===sid);const pool=shw?crewFor([shw]).list:realCrew();const toks=["ทุกคน","Artist","Band","Crew","Management",...pool.map(c=>c.short||c.name)];
     const cur=(val||"").split(",").map(s=>s.trim()).filter(Boolean);
     return `<div class="${cls}"><label for="${id}">${label}</label><input id="${id}" name="${k}" value="${esc(val)}" placeholder="ทุกคน" autocomplete="off"><div class="tok" data-for="${id}">${[...new Set(toks)].map(t=>`<button type="button" class="${cur.includes(t)?"on":""}" data-tok="${esc(t)}">${esc(t)}</button>`).join("")}</div></div>`}
+  if(type==="crew"){const cur=(val||"").split(",").map(s=>s.trim()).filter(Boolean);
+    return `<div class="${cls}"><label for="${id}">${label}</label><input id="${id}" name="${k}" value="${esc(val)}" placeholder="ทุกคน" autocomplete="off"><div class="tok" data-for="${id}" data-mode="crew">${realCrew().map(c=>{const t=c.short||c.name;return `<button type="button" class="${cur.includes(t)?"on":""}" data-tok="${esc(t)}" title="${esc(c.role)}">${esc(t)} <span style="opacity:.6">· ${esc(c.role)}</span></button>`}).join("")}</div></div>`}
   if(type.startsWith("auto:")) return `<div class="${cls}"><label for="${id}">${label}</label><input id="${id}" name="${k}" value="${esc(val)}" readonly></div>`;
   const it={date:"date",time:"time",tel:"tel",url:"url",number:"number",pin:"password"}[type]||"text";
   const extra=type==="pin"?' inputmode="numeric" autocomplete="off"':type==="time"?' step="300"':"";
   return `<div class="${cls}"><label for="${id}">${label}</label><input id="${id}" name="${k}" type="${it}" value="${esc(val)}"${extra}></div>`;
 }
 function openForm({title,fields,values,onSave,onDelete}){
-  FORM={fields,onSave,onDelete};
+  FORM={fields,onSave,onDelete};FORM_SHOW=values.showId||"";
   $("#mTitle").textContent=title;
   $("#mFields").innerHTML=fields.map(f=>fieldHtml(f,values[f[0]]??"")).join("");
   $("#mErr").textContent="";
@@ -452,11 +464,13 @@ function validate(tab,v){
   if(tab==="Travel"&&!okDate(v.date))throw new Error("ใส่วันที่ก่อน");
   if(tab==="Hotels"){if(!v.name)throw new Error("ใส่ชื่อโรงแรมก่อน");if(!okDate(v.checkin)||!okDate(v.checkout))throw new Error("ใส่วันเช็กอินและเช็กเอาต์")}
   if(tab==="Schedule"&&!v.who)v.who="ทุกคน";
+  if(tab==="Crew"){if(!v.name)throw new Error("ใส่ชื่อก่อน");if(!v.short)v.short=v.name}
 }
-function editRecord(tab,o){
-  openForm({title:"แก้"+TITLES[tab],fields:FIELDS[tab],values:o,
-    onSave:async v=>{validate(tab,v);const vals=KEYS[tab].map(k=>k in v?v[k]:o[k]);applyServer(await post({pin:store.get("pun-pin"),action:"update",tab,row:o._row,old:o._old,values:vals}))},
-    onDelete:async()=>{applyServer(await post({pin:store.get("pun-pin"),action:"delete",tab,row:o._row,old:o._old}))}});
+function editRecord(tab,o,only){
+  const fl=only?FIELDS[tab].filter(f=>only.includes(f[0])):FIELDS[tab];
+  openForm({title:only?"เลือกทีมที่ไป "+o.name:"แก้"+TITLES[tab],fields:fl,values:o,
+    onSave:async v=>{const full={};KEYS[tab].forEach(k=>full[k]=k in v?v[k]:o[k]);validate(tab,full);const vals=KEYS[tab].map(k=>full[k]);applyServer(await post({pin:store.get("pun-pin"),action:"update",tab,row:o._row,old:o._old,values:vals}))},
+    onDelete:only?null:async()=>{applyServer(await post({pin:store.get("pun-pin"),action:"delete",tab,row:o._row,old:o._old}))}});
 }
 function addRecord(tab,preset){
   const values={...preset};
@@ -492,6 +506,7 @@ function render(){
   $("#n-days").textContent=days.length;$("#n-flights").textContent=D.Travel.length;$("#n-hotels").textContent=D.Hotels.length;$("#n-venues").textContent=D.Shows.length;
 }
 document.addEventListener("click",e=>{
+  const cp=e.target.closest("[data-crewpick]");if(cp){e.stopPropagation();editRecord("Shows",D.Shows[+cp.dataset.crewpick],["crew"]);return}
   const ed=e.target.closest("[data-edit]");if(ed){e.stopPropagation();editRecord(ed.dataset.edit,D[ed.dataset.edit][+ed.dataset.i]);return}
   const ad=e.target.closest("[data-add]");if(ad){e.stopPropagation();addRecord(ad.dataset.add,JSON.parse(ad.dataset.preset||"{}"));return}
   const d=e.target.closest("[data-day]");if(d){VIEW="days";DAY=d.dataset.day;setHash();window.scrollTo(0,0);return}
