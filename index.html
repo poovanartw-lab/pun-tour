@@ -126,25 +126,35 @@ main{padding:20px 22px 48px;min-width:0}
 .lrow:hover{background:var(--grey)}
 .lrow .sub{font-size:12px;color:var(--muted)}
 .lrow .big{font-weight:600}
-.cal{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px;box-shadow:var(--shadow)}
-.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.calhead h2{margin:0;font-family:var(--font-display);font-weight:700;font-size:20px}
-.calnav{border:1px solid var(--line);background:var(--panel);border-radius:999px;width:36px;height:36px;font-size:18px;cursor:pointer}
-.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.shell.noside{grid-template-columns:1fr}
+.calwrap{display:grid;gap:18px;max-width:1180px;margin:0 auto}
+@media(min-width:960px){.calwrap{grid-template-columns:minmax(0,1fr) 340px;align-items:start}.callist{margin-top:0!important;position:sticky;top:12px}}
+.cal{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;box-shadow:var(--shadow)}
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 2px 12px}
+.calhead h2{margin:0;font-family:var(--font-display);font-weight:700;font-size:22px;white-space:nowrap}
+.calhead .sub{font-size:12px;color:var(--muted)}
+.calbtns{display:flex;gap:6px}
+.calnav{border:1px solid var(--line);background:var(--panel);border-radius:999px;min-width:36px;height:36px;padding:0 12px;font-size:16px;cursor:pointer}
+.calnav:hover{background:var(--grey)}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .calw{font-size:11px;color:var(--muted);text-align:center;padding:2px 0 4px;font-weight:600}
-.cd{min-height:74px;border-radius:12px;background:var(--panel);border:1px solid transparent;padding:4px 5px;text-align:left;display:flex;flex-direction:column;gap:2px;cursor:pointer;overflow:hidden;min-width:0}
+.calw.we{color:#a39d93}
+.cd{min-height:70px;border-radius:12px;background:var(--panel);border:1px solid var(--line);padding:5px;text-align:left;display:flex;flex-direction:column;gap:3px;cursor:pointer;overflow:hidden;min-width:0;transition:background .15s}
+.cd:hover{background:var(--grey)}
 .cd.out{visibility:hidden}
-.cd.past{opacity:.5}
-.cd .dn{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
-.cd.today{border:2px solid var(--ink)}
-.cd.has{background:var(--ink);color:#fff}
-.cd.tr{background:var(--grey)}
-.cd .ev{font-size:10.5px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word}
-.cd .ic{font-size:11px;margin-top:auto}
-.calleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.cd.past{opacity:.45}
+.cd .dn{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;width:22px;height:22px;display:grid;place-items:center;border-radius:999px;margin:-1px 0 0 -1px}
+.cd.today .dn{background:var(--ink);color:#fff}
+.cd.has{background:var(--card);border-color:#cfcac1}
+.cd .ev{display:block;background:var(--ink);color:#fff;border-radius:7px;padding:2px 5px;font-size:10px;line-height:1.3;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cd .ic{font-size:11px;margin-top:auto;color:var(--muted)}
+.calleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:12px 2px 0}
 .calleg i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:5px}
-.callist{margin-top:14px}
-@media(min-width:760px){.cd{min-height:96px;padding:6px 8px}.cd .ev{font-size:12px}}
+.callist{margin-top:4px}
+@media(max-width:759px){.cd .ev{font-size:0;height:6px;padding:0;border-radius:3px}.cd.has{background:var(--card)}}
+.callist .lrow{grid-template-columns:86px 1fr}
+.callist .lrow .pill{display:none}
+@media(min-width:760px){.cal{padding:18px}.cd{min-height:104px;padding:7px}.cd .ev{font-size:12px;padding:3px 7px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.calgrid{gap:6px}}
 h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 12px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
@@ -444,14 +454,14 @@ function renderCal(){const [y,m]=CALM.split("-").map(Number);const first=new Dat
   const lead=(first.getDay()+6)%7;const cells=[];for(let i=0;i<lead;i++)cells.push('<div class="cd out"></div>');
   for(let d=1;d<=n;d++){const s=`${y}-${pad(m)}-${pad(d)}`;const sh=showsOn(s).filter(x=>x.status!=="Cancelled");const tr=travelOn(s);
     const ic=[...new Set(tr.map(r=>r.type==="Flight"?"✈︎":r.type==="Van"?"🚐":"➜"))].join(" ");
-    const cls=["cd",sh.length?"has":tr.length?"tr":"",s===t?"today":"",s<t?"past":""].filter(Boolean).join(" ");
+    const cls=["cd",sh.length?"has":"",s===t?"today":"",s<t?"past":""].filter(Boolean).join(" ");
     cells.push(`<button type="button" class="${cls}" data-day="${s}"><span class="dn">${d}</span>${sh.map(x=>`<span class="ev">${esc(x.name)}</span>`).join("")}${ic?`<span class="ic">${ic}</span>`:""}</button>`)}
   const shows=D.Shows.filter(x=>(x.date||"").slice(0,7)===CALM||(x.endDate||"").slice(0,7)===CALM).sort((a,b)=>a.date.localeCompare(b.date));
   const mn=first.toLocaleDateString("th-TH",{month:"long",year:"numeric"});
-  $("#app").innerHTML=`<div class="cal"><div class="calhead"><button class="calnav" type="button" data-calnav="-1" aria-label="เดือนก่อน">‹</button><h2>${esc(mn)}</h2><button class="calnav" type="button" data-calnav="1" aria-label="เดือนถัดไป">›</button></div>
-  <div class="calgrid">${["จ","อ","พ","พฤ","ศ","ส","อา"].map(w=>`<div class="calw">${w}</div>`).join("")}${cells.join("")}</div>
-  <div class="calleg"><span><i style="background:var(--ink)"></i>มีงาน</span><span><i style="background:var(--grey)"></i>วันเดินทาง</span><span><i style="border:2px solid var(--ink)"></i>วันนี้</span></div></div>
-  <div class="callist"><h2 class="lh">งานเดือนนี้ (${shows.length})</h2><div class="list">${shows.length?shows.map(x=>`<button class="lrow" type="button" data-day="${x.date}" style="${(x.endDate||x.date)<t?"opacity:.55":""}"><div><div class="big">${okDate(x.endDate)?fRange(x.date,x.endDate):fShort(x.date)}</div><div class="sub">${esc(x.setTime||"")}</div></div><div><div class="big">${esc(x.name)}</div><div class="sub">${esc([x.venue,x.city].filter(Boolean).join(" · "))}</div></div><span class="pill ${x.status==="Cancelled"?"off":"show"}">${x.status==="Cancelled"?"ยกเลิก":esc(x.type||"Show")}</span></button>`).join(""):`<div class="empty">เดือนนี้ยังไม่มีงาน</div>`}</div></div>`}
+  $("#app").innerHTML=`<div class="calwrap"><div class="cal"><div class="calhead"><div><h2>${esc(mn)}</h2><div class="sub">${shows.length} งานในเดือนนี้</div></div><div class="calbtns"><button class="calnav" type="button" data-calnav="-1" aria-label="เดือนก่อน">‹</button><button class="calnav" type="button" data-calnav="0">วันนี้</button><button class="calnav" type="button" data-calnav="1" aria-label="เดือนถัดไป">›</button></div></div>
+  <div class="calgrid">${["จ","อ","พ","พฤ","ศ","ส","อา"].map((w,i)=>`<div class="calw${i>4?" we":""}">${w}</div>`).join("")}${cells.join("")}</div>
+  <div class="calleg"><span><i style="background:var(--ink)"></i>มีงาน</span><span>✈︎ 🚐 วันเดินทาง</span><span><i style="background:var(--ink);border-radius:999px"></i>วันนี้</span></div></div>
+  <div class="callist"><h2 class="lh">งานเดือนนี้ (${shows.length})</h2><div class="list">${shows.length?shows.map(x=>`<button class="lrow" type="button" data-day="${x.date}" style="${(x.endDate||x.date)<t?"opacity:.55":""}"><div><div class="big">${okDate(x.endDate)?fRange(x.date,x.endDate):fShort(x.date)}</div><div class="sub">${esc(x.setTime||"")}</div></div><div><div class="big">${esc(x.name)}</div><div class="sub">${esc([x.venue,x.city].filter(Boolean).join(" · "))}</div></div><span class="pill ${x.status==="Cancelled"?"off":"show"}">${x.status==="Cancelled"?"ยกเลิก":esc(x.type||"Show")}</span></button>`).join(""):`<div class="empty">เดือนนี้ยังไม่มีงาน</div>`}</div></div></div>`}
 function renderFlights(){const rows=[...D.Travel].sort((a,b)=>(a.date+a.dep).localeCompare(b.date+b.dep));
   $("#app").innerHTML=`<h2 class="lh">การเดินทางทั้งหมด (${rows.length}) ${addBtn("Travel","+ เพิ่ม",{})}</h2><div class="list">${rows.length?rows.map(r=>`<button class="lrow" type="button" data-day="${r.date}"><div><div class="big">${fShort(r.date)}</div><div class="sub mono">${esc(r.dep)}${r.arr?"–"+esc(r.arr):""}</div></div><div><div class="big">${esc(TT[r.type]||r.type)} ${esc(r.from)} → ${esc(r.to)}</div><div class="sub">${esc(strip(r.no))}${r.driver?" · คนขับ "+esc(r.driver):""}</div></div><span class="pill travel">${esc(r.who||"ทุกคน")}</span></button>`).join(""):`<div class="empty">ยังไม่มีข้อมูลการเดินทาง</div>`}</div>`}
 function renderHotels(){const rows=[...D.Hotels].sort((a,b)=>a.checkin.localeCompare(b.checkin));
@@ -773,7 +783,7 @@ function render(){
   readHash();const days=allDays();
   if(VIEW==="days"&&!DAY){const t=todayISO();DAY=days.find(d=>d>=t)||days[days.length-1]||t}
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.view===VIEW));
-  $("#side").style.display=VIEW==="days"?"":"none";
+  $("#side").style.display=VIEW==="days"?"":"none";$("#side").parentElement.classList.toggle("noside",VIEW!=="days");
   if(VIEW==="days"){renderSide();renderDay(DAY)}else if(VIEW==="cal")renderCal();else if(VIEW==="flights")renderFlights();else if(VIEW==="hotels")renderHotels();else renderVenues();
   $("#tourMeta").textContent=`${days.length?fRange(days[0],days[days.length-1]):""} · ${D.Shows.length} งาน · ${SOURCE}`;
   $("#n-days").textContent=days.length;$("#n-flights").textContent=D.Travel.length;$("#n-hotels").textContent=D.Hotels.length;$("#n-venues").textContent=D.Shows.length;
@@ -782,7 +792,7 @@ document.addEventListener("click",e=>{
   const cp=e.target.closest("[data-crewpick]");if(cp){e.stopPropagation();editRecord("Shows",D.Shows[+cp.dataset.crewpick],["crew"]);return}
   const ed=e.target.closest("[data-edit]");if(ed){e.stopPropagation();editRecord(ed.dataset.edit,D[ed.dataset.edit][+ed.dataset.i]);return}
   const ad=e.target.closest("[data-add]");if(ad){e.stopPropagation();addRecord(ad.dataset.add,JSON.parse(ad.dataset.preset||"{}"));return}
-  const cn=e.target.closest("[data-calnav]");if(cn){const [y,m]=CALM.split("-").map(Number);const nd=new Date(y,m-1+(+cn.dataset.calnav),1);CALM=iso(nd).slice(0,7);setHash();return}
+  const cn=e.target.closest("[data-calnav]");if(cn){const [y,m]=CALM.split("-").map(Number);const k=+cn.dataset.calnav;CALM=k?iso(new Date(y,m-1+k,1)).slice(0,7):todayISO().slice(0,7);setHash();return}
   const d=e.target.closest("[data-day]");if(d){VIEW="days";DAY=d.dataset.day;setHash();window.scrollTo(0,0);return}
   const tb=e.target.closest(".tab");if(tb){VIEW=tb.dataset.view;setHash()}});
 window.addEventListener("hashchange",render);
