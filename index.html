@@ -184,6 +184,18 @@ body.editing button.chip{cursor:pointer}body.editing button.chip:hover{border-co
 .install .x{background:transparent;color:#fff;padding:4px 8px}
 .addrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 
+.ptext{width:100%;min-height:240px;font:inherit;font-size:15px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel);color:var(--ink)}
+.ph{font-size:14px;margin:16px 0 8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pinl{font-size:12px;font-weight:500;color:var(--muted);display:inline-flex;gap:6px;align-items:center}
+.pinl.block{display:flex;margin-top:10px;font-size:13px;color:var(--ink)}
+.plist{display:grid;gap:6px}
+.prow{display:grid;grid-template-columns:22px 64px 64px minmax(120px,1fr) 104px 110px;gap:6px;align-items:center;background:var(--panel);border-radius:12px;padding:6px 8px}
+.prow input,.prow select{font:inherit;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:5px 7px;background:var(--card);color:var(--ink);min-width:0}
+.prow .pin-l,.prow .pin-n{grid-column:2/-1;font-size:12px}
+.prow:has(.pchk:not(:checked)){opacity:.4}
+.pwarn{margin-top:10px;font-size:12px;color:var(--muted)}
+#pModal .sheet{max-width:760px}
+@media (max-width:640px){.prow{grid-template-columns:22px 60px 60px 1fr}.prow .pin-c,.prow .pin-w{grid-column:2/-1}}
 .tourbar{padding-top:max(16px,env(safe-area-inset-top))}
 </style>
 </head>
@@ -194,7 +206,7 @@ body.editing button.chip{cursor:pointer}body.editing button.chip:hover{border-co
   <div><div class="kick">Tour 2026 · Day Schedule</div><h1 id="tourTitle">PUN</h1><div class="meta" id="tourMeta"></div></div>
   <div class="who"><label for="who">ดูตารางของ</label><select id="who"></select><button class="hbtn" type="button" id="editToggle">✎ แก้ไข</button></div>
 </header>
-<div class="editbar" id="editbar"><span>โหมดแก้ไข · กดปุ่ม ✎ ที่แต่ละรายการ หรือ + เพื่อเพิ่ม</span><span class="spacer" style="flex:1"></span><button class="hbtn" type="button" id="reloadBtn">รีเฟรชข้อมูล</button><button class="hbtn" type="button" id="lockBtn">ออกจากโหมดแก้ไข</button></div>
+<div class="editbar" id="editbar"><span>โหมดแก้ไข · กดปุ่ม ✎ ที่แต่ละรายการ หรือ + เพื่อเพิ่ม</span><span class="spacer" style="flex:1"></span><button class="hbtn on" type="button" id="pasteBtn">📋 วางข้อความจาก LINE</button><button class="hbtn" type="button" id="reloadBtn">รีเฟรชข้อมูล</button><button class="hbtn" type="button" id="lockBtn">ออกจากโหมดแก้ไข</button></div>
 <nav class="tabs" role="tablist" aria-label="มุมมอง">
   <button class="tab" role="tab" data-view="days">Days <span class="n" id="n-days"></span></button>
   <button class="tab" role="tab" data-view="flights">Travel <span class="n" id="n-flights"></span></button>
@@ -218,6 +230,8 @@ body.editing button.chip{cursor:pointer}body.editing button.chip:hover{border-co
     </div>
   </form>
 </div>
+
+<div class="modal" id="pModal" role="dialog" aria-modal="true" aria-label="วางข้อความจาก LINE"><div class="sheet"><h2>วางข้อความจาก LINE</h2><div id="pBody"></div></div></div>
 
 <div class="install" id="install" role="region" aria-label="ติดตั้งแอป">
   <div style="flex:1"><b>ติดตั้ง PUN TOUR ลงมือถือ</b><span id="installText"></span></div>
@@ -455,7 +469,7 @@ $("#mFields").addEventListener("click",e=>{const b=e.target.closest("[data-tok]"
   inp.value=cur.join(", ");b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",cur.includes(x.dataset.tok)))});
 $("#mCancel").onclick=closeForm;
 $("#modal").addEventListener("click",e=>{if(e.target.id==="modal")closeForm()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&FORM)closeForm()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(FORM)closeForm();else if(IMP)closeImport()}});
 async function busy(fn){const btns=[$("#mSave"),$("#mDelete")];btns.forEach(b=>b.disabled=true);$("#mErr").textContent="";
   try{await fn();closeForm()}catch(e){$("#mErr").textContent=e.message||"เกิดข้อผิดพลาด";if(/PIN/.test(e.message||"")){store.del("pun-pin");exitEdit()}}finally{btns.forEach(b=>b.disabled=false)}}
 $("#mForm").addEventListener("submit",e=>{e.preventDefault();if(!FORM)return;const v={};FORM.fields.forEach(([k])=>v[k]=$("#f_"+k).value.trim());busy(()=>FORM.onSave(v))});
@@ -485,6 +499,213 @@ function addRecord(tab,preset){
   openForm({title:"เพิ่ม"+TITLES[tab],fields:FIELDS[tab],values,
     onSave:async v=>{validate(tab,v);const vals=KEYS[tab].map(k=>v[k]??"");const json=await post({pin:store.get("pun-pin"),action:"add",tab,values:vals});if(tab==="Shows"&&okDate(v.date)){VIEW="days";DAY=v.date;history.replaceState(null,"","#d-"+v.date)}applyServer(json)}});
 }
+
+/* ===== LINE message parser ===== */
+const TH_MONTHS={"มกราคม":1,"ม.ค.":1,"มค":1,"กุมภาพันธ์":2,"ก.พ.":2,"กพ":2,"มีนาคม":3,"มี.ค.":3,"มีค":3,"เมษายน":4,"เม.ย.":4,"เมย":4,"พฤษภาคม":5,"พ.ค.":5,"พค":5,"มิถุนายน":6,"มิ.ย.":6,"มิย":6,"กรกฎาคม":7,"ก.ค.":7,"กค":7,"สิงหาคม":8,"ส.ค.":8,"สค":8,"กันยายน":9,"ก.ย.":9,"กย":9,"ตุลาคม":10,"ต.ค.":10,"ตค":10,"พฤศจิกายน":11,"พ.ย.":11,"พย":11,"ธันวาคม":12,"ธ.ค.":12,"ธค":12,
+  "jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,"jul":7,"aug":8,"sep":9,"oct":10,"nov":11,"dec":12};
+function parseDateText(s,fallbackYear){
+  s=(s||"").trim(); let m;
+  if((m=/(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))) return ymd(+m[1],+m[2],+m[3]);
+  if((m=/(\d{1,2})\s*[\/.-]\s*(\d{1,2})\s*[\/.-]\s*(\d{2,4})/.exec(s))){let y=+m[3];if(y<100)y+=2000;return ymd(y,+m[2],+m[1])}
+  const low=s.toLowerCase();
+  for(const [name,mo] of Object.entries(TH_MONTHS).sort((a,b)=>b[0].length-a[0].length)){
+    const i=low.indexOf(name.toLowerCase()); if(i<0) continue;
+    const before=low.slice(0,i).match(/(\d{1,2})\D*$/); const after=low.slice(i+name.length).match(/^\D*(\d{4})/);
+    if(!before) continue; return ymd(after?+after[1]:fallbackYear,mo,+before[1]);
+  }
+  return "";
+  function ymd(y,mo,d){if(y>2400)y-=543;const p=n=>String(n).padStart(2,"0");return `${y}-${p(mo)}-${p(d)}`}
+}
+const T=s=>{const m=/(\d{1,2})\s*[.:：]\s*(\d{2})/.exec(s||"");return m?String(+m[1]).padStart(2,"0")+":"+m[2]:""};
+const RANGE=/(\d{1,2})\s*[.:：]\s*(\d{2})\s*(?:น\.?)?\s*(?:-|–|—|ถึง|to)\s*(\d{1,2})\s*[.:：]\s*(\d{2})/i;
+const ONE=/(\d{1,2})\s*[.:：]\s*(\d{2})/;
+const URL_RE=/https?:\/\/\S+/;
+const PHONE=/(0\d[\d\s-]{7,11}\d)/;
+function clean(line){return line.replace(/[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{25A0}-\u{27BF}\u{2900}-\u{297F}\u{2B00}-\u{2BFF}\u{3030}\u{303D}\u{FE0F}\u{200D}]/gu,"").replace(/^[\s⁃•·\-–—*]+/,"").replace(/━+/g,"").trim()}
+function guessCat(label,section){
+  const s=(label+" "+(section||"")).toLowerCase();
+  if(/sound\s*check|soundcheck|ซาวด์|เช็คเสียง|เช็กเสียง|line\s*check/.test(s))return "Soundcheck";
+  if(/รถ|van|รับ.*จุด|จุดที่|เดินทาง/.test(s))return "Van";
+  if(/flight|บิน|ไฟลต์|สนามบิน/.test(s))return /สนามบิน|check.?in/.test(s)?"Airport":"Flight";
+  if(/ข้าว|อาหาร|meal|lunch|dinner|catering/.test(s))return "Meal";
+  if(/press|สัมภาษณ์|interview|meet|greet/.test(s))return "Press";
+  if(/lobby|นัด|ถึงหน้างาน|call time|calltime/.test(s))return "Lobby";
+  if(/โรงแรม|hotel|check.?out|เช็กเอาต์/.test(s))return "Hotel";
+  if(/load|set\s*up|setup|โหลด|ติดตั้ง|show|โชว์|แสดง|rehearsal|ซ้อม|stand\s*by|standby|เวที/.test(s))return "Show";
+  return "Other";
+}
+function guessWho(label,cat,crewNames){
+  const found=crewNames.filter(n=>n&&label.includes(n));
+  if(found.length)return found.join(", ");
+  if(/load|set\s*up|setup|โหลด|ติดตั้ง/i.test(label))return "Crew";
+  return "ทุกคน";
+}
+function parseLine(text,opts={}){
+  const year=opts.year||new Date().getFullYear(); const crewNames=opts.crewNames||[];
+  const out={show:{},items:[],van:[],warnings:[],date:""};
+  const raw=String(text||"").split(/\r?\n/);
+  let section="", lastItem=null, songs=[], inShow=false, pickup=null;
+  const pushItem=(it)=>{out.items.push(it);lastItem=it;return it};
+  for(let i=0;i<raw.length;i++){
+    const orig=raw[i]; const line=clean(orig); if(!line) continue;
+    const url=(orig.match(URL_RE)||[])[0];
+    const kv=/^([^:：]{0,40}?[^\d\s:：])\s*[:：]\s*(.*)$/.exec(line);
+    const key=kv?kv[1].trim().toLowerCase():""; const val=kv?kv[2].trim():"";
+    // URL-only line: attach to last thing
+    if(url&&line.replace(URL_RE,"").trim()===""){
+      if(pickup){pickup.map=url}else if(lastItem&&!lastItem._mapped){lastItem.notes=[lastItem.notes,"แผนที่ "+url].filter(Boolean).join(" · ");lastItem._mapped=1}
+      else if(!out.show.map)out.show.map=url;
+      continue;
+    }
+    // headers
+    if(/^(งาน|ชื่องาน|event)$/.test(key)){out.show.name=val;continue}
+    if(/^(ศิลปิน|artist)$/.test(key)){continue}
+    if(/^(วันที่แสดง|วันที่|วันแสดง|date|วันงาน)$/.test(key)){const d=parseDateText(val,year);if(d&&!out.date)out.date=d;continue}
+    if(/^(สถานที่|venue|location|ที่อยู่)$/.test(key)){if(val)out.show.venue=val;if(url)out.show.map=url;section="";continue}
+    if(/^เวที$/.test(key)){section="เวที";inShow=false;pickup=null;continue}
+    if(/^(show|โชว์)$/i.test(line)){section="SHOW";inShow=true;pickup=null;continue}
+    if(/^นัดหมายรถ|^รถตู้|^การเดินทาง/.test(line)&&!RANGE.test(line)&&!ONE.test(line)){section="รถตู้";inShow=false;continue}
+    // pickup point header: "จุดที่ 1 รับภู + เครื่องดนตรี"
+    const pm=/^จุดที่\s*(\d+)\s*(.*)$/.exec(line);
+    if(pm){pickup={no:pm[1],label:pm[2].trim(),time:"",addr:"",phone:"",map:""};out.van.push(pickup);section="รถตู้";continue}
+    if(pickup){
+      if(/^เวลา/.test(line)&&ONE.test(line)){pickup.time=T(line);continue}
+      if(/เบอร์|โทร|tel/i.test(line)){const ph=(line.match(PHONE)||[])[0];pickup.phone=line.replace(/^(เบอร์ติดต่อ|เบอร์|โทร)\s*[:：]?\s*/,"").trim();continue}
+      if(!pickup.addr&&!/หมายเหตุ/.test(line)){pickup.addr=line.replace(URL_RE,"").trim();if(url)pickup.map=url;continue}
+    }
+    // note / arrival deadline
+    if(/หมายเหตุ|note/i.test(line)){
+      const t=T(line); const note=line.replace(/^หมายเหตุ\s*[:：]?\s*/,"").trim();
+      if(t&&/ถึง|ไม่เกิน|ภายใน/.test(line)){pushItem({time:t,end:"",item:"ถึงหน้างาน (ไม่เกิน "+t+")",cat:"Lobby",who:"ทุกคน",loc:out.show.venue||"",notes:""});}
+      out.show.notes=[out.show.notes,note].filter(Boolean).join(" · ");pickup=null;continue}
+    // SHOW block date/time
+    if(inShow&&/^(วันที่|date)/.test(key)){const d=parseDateText(val,year);if(d&&!out.date)out.date=d;continue}
+    const rg=RANGE.exec(line);
+    if(rg){
+      const a=String(+rg[1]).padStart(2,"0")+":"+rg[2], b=String(+rg[3]).padStart(2,"0")+":"+rg[4];
+      let label=kv&&!/^(เวลา|time)$/.test(key)?kv[1].trim():"";
+      const prefix=line.slice(0,line.indexOf(rg[0])).replace(/[:：\-–]\s*$/,"").replace(/^(เวลา|time)\s*[:：]?\s*/i,"").trim();
+      const rest=line.slice(line.indexOf(rg[0])+rg[0].length).replace(/^\s*(น\.?)?\s*/,"").trim();
+      if(!label) label=prefix||"";
+      if(!label) label=rest||(inShow?"โชว์":section||"รายการ");
+      const extra=label===rest?"":rest;
+      const cat=inShow&&!/load|set|sound/i.test(label)?"Show":guessCat(label,section);
+      const it=pushItem({time:a,end:b,item:label,cat,who:guessWho(label,cat,crewNames),loc:section==="เวที"||inShow?"เวที":"",notes:extra});
+      if(cat==="Show"&&(inShow||/โชว์|show|แสดง/i.test(label))&&!/load|set|โหลด|ติดตั้ง/i.test(label)&&!out.show.setTime){out.show.setTime=a;const mm=(mins(b)-mins(a));if(mm>0)out.show.setLen=String(mm)}
+      continue;
+    }
+    if(inShow&&!kv&&!ONE.test(line)){songs.push(line);continue}
+    // "(สามารถ...)" helper notes
+    if(/^\(.*\)$/.test(line)&&lastItem){lastItem.notes=[lastItem.notes,line.replace(/^\(|\)$/g,"")].filter(Boolean).join(" · ");continue}
+    // single time "Label : 14:00"
+    if(kv&&ONE.test(val)&&!/^(เวลา|time)$/.test(key)){const t=T(val);const cat=guessCat(kv[1],section);pushItem({time:t,end:"",item:kv[1].trim()+(val.replace(ONE,"").replace(/^\s*น\.?/,"").trim()?" "+val.replace(ONE,"").replace(/^\s*น\.?/,"").trim():""),cat,who:guessWho(kv[1],cat,crewNames),loc:"",notes:""});continue}
+    if(!kv&&ONE.test(line)&&line.length<80){const t=T(line);const label=line.replace(ONE,"").replace(/^\s*(น\.?)?\s*[-–:]?\s*/,"").trim()||"รายการ";const cat=guessCat(label,section);pushItem({time:t,end:"",item:label,cat,who:guessWho(label,cat,crewNames),loc:"",notes:""});continue}
+    out.warnings.push(line);
+  }
+  // van pickups -> schedule items
+  out.van.forEach(p=>{
+    const who=guessWho(p.label,"Van",crewNames);
+    out.items.push({time:p.time,end:"",item:`รถตู้${p.label?" "+p.label:""} (จุดที่ ${p.no})`,cat:"Van",who,loc:p.addr||p.label.replace(/^รับ\s*/,""),notes:[p.phone?"ติดต่อ "+p.phone:"",p.map?"แผนที่ "+p.map:""].filter(Boolean).join(" · ")});
+  });
+  if(songs.length){out.show.notes=["เพลง: "+songs.join(" / "),out.show.notes].filter(Boolean).join(" · ")}
+  out.items.forEach(it=>{delete it._mapped;it.item=it.item.replace(/\s{2,}/g," ").trim()});
+  out.items.sort((x,y)=>(mins(x.time)??9999)-(mins(y.time)??9999));
+  return out;
+  function mins(t){const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?(+m[1])*60+(+m[2]):null}
+}
+
+
+/* ===== import from LINE ===== */
+let IMP=null;
+function openImport(){
+  if(!editing()){toast("กด ✎ แก้ไข และใส่ PIN ก่อน");return}
+  IMP={step:1};
+  $("#pBody").innerHTML=`<p class="sub" style="margin:0 0 8px">ก๊อปข้อความรายละเอียดงานจาก LINE มาวางด้านล่าง แล้วกด "อ่านข้อความ" ระบบจะแยกเป็นคิวเวลาให้ตรวจก่อนบันทึก</p>
+    <textarea id="pText" class="ptext" placeholder="งาน : ...&#10;วันที่แสดง : 25 พฤศจิกายน 2026&#10;สถานที่ : ...&#10;Loading : 12:00-13:00&#10;SOUND CHECK : 14:00 - 15:00"></textarea>
+    <div class="err" id="pErr"></div>
+    <div class="acts"><button class="btn dark" type="button" id="pRead">อ่านข้อความ</button><button class="btn" type="button" data-pclose>ยกเลิก</button></div>`;
+  $("#pModal").classList.add("open");
+  setTimeout(()=>$("#pText").focus(),30);
+  $("#pRead").onclick=()=>{
+    const txt=$("#pText").value.trim(); if(!txt){$("#pErr").textContent="วางข้อความก่อน";return}
+    const year=+(DAY||todayISO()).slice(0,4)||new Date().getFullYear();
+    const r=parseLine(txt,{year,crewNames:D.Crew.map(c=>c.short||c.name).filter(n=>n&&!/^\(/.test(n))});
+    if(!r.items.length&&!r.show.venue&&!r.date){$("#pErr").textContent="อ่านเวลาหรือรายละเอียดงานจากข้อความนี้ไม่ได้ ลองตรวจรูปแบบข้อความ";return}
+    IMP={step:2,r,text:txt}; renderImportPreview();
+  };
+}
+function closeImport(){$("#pModal").classList.remove("open");IMP=null}
+function showsOnDate(d){return D.Shows.filter(s=>s.date===d||(s.endDate&&s.date<=d&&d<=s.endDate))}
+function renderImportPreview(){
+  const r=IMP.r; const date=r.date||DAY||todayISO();
+  const cands=showsOnDate(date);
+  const sel=cands[0]?.id||"__new";
+  const opts=[...D.Shows].sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`<option value="${esc(s.id)}"${s.id===sel?" selected":""}>${esc(s.id)} · ${fShort(s.date)} · ${esc(s.name)}</option>`).join("");
+  const showFields=[["name","ชื่องาน"],["venue","Venue / สถานที่"],["map","ลิงก์แผนที่"],["setTime","เวลาขึ้นโชว์"],["setLen","ความยาว (นาที)"],["notes","หมายเหตุงาน"]];
+  const itemRows=r.items.map((it,i)=>`<div class="prow" data-i="${i}">
+      <input type="checkbox" class="pchk" checked aria-label="ใช้รายการนี้">
+      <input class="pin-t" value="${esc(it.time)}" aria-label="เวลา" placeholder="--:--">
+      <input class="pin-e" value="${esc(it.end)}" aria-label="ถึงเวลา" placeholder="ถึง">
+      <input class="pin-i" value="${esc(it.item)}" aria-label="รายการ">
+      <select class="pin-c" aria-label="ประเภท">${CATS.map(c=>`<option value="${c}"${c===it.cat?" selected":""}>${CATLAB[c]}</option>`).join("")}</select>
+      <input class="pin-w" value="${esc(it.who)}" aria-label="ใคร">
+      <input class="pin-l" value="${esc(it.loc)}" aria-label="สถานที่" placeholder="สถานที่">
+      <input class="pin-n" value="${esc(it.notes)}" aria-label="หมายเหตุ" placeholder="หมายเหตุ">
+    </div>`).join("");
+  $("#pBody").innerHTML=`
+    <div class="fgrid">
+      <div class="f"><label for="pDate">วันที่</label><input id="pDate" type="date" value="${esc(date)}"></div>
+      <div class="f"><label for="pShow">ใส่ลงงาน</label><select id="pShow"><option value="__new"${sel==="__new"?" selected":""}>+ สร้างงานใหม่</option>${opts}</select></div>
+    </div>
+    <h3 class="ph">ข้อมูลงาน <label class="pinl"><input type="checkbox" id="pShowUpd" checked> อัปเดตช่องที่อ่านได้</label></h3>
+    <div class="fgrid">${showFields.map(([k,l])=>`<div class="f${k==="notes"||k==="map"||k==="name"?" full":""}"><label for="ps_${k}">${l}</label><input id="ps_${k}" value="${esc(r.show[k]||"")}" placeholder="(ไม่เปลี่ยน)"></div>`).join("")}</div>
+    <h3 class="ph">คิวเวลา ${r.items.length} รายการ <span class="sub">ติ๊กออกถ้าไม่เอา · แก้ข้อความได้</span></h3>
+    <div class="plist">${itemRows||'<div class="sub">ไม่พบคิวเวลา</div>'}</div>
+    <div id="pExisting"></div>
+    ${r.van.length?`<label class="pinl block"><input type="checkbox" id="pTravel" checked> เพิ่มในกล่อง Travel ด้วย (รถตู้ ${r.van.length} จุดรับ)</label>`:""}
+    ${r.warnings.length?`<details class="pwarn"><summary>บรรทัดที่อ่านไม่ออก ${r.warnings.length} บรรทัด (ไม่ได้บันทึก)</summary>${r.warnings.map(w=>`<div>${esc(w)}</div>`).join("")}</details>`:""}
+    <div class="err" id="pErr"></div>
+    <div class="acts"><button class="btn dark" type="button" id="pSave">บันทึกลง Sheet</button><button class="btn" type="button" id="pBack">กลับไปแก้ข้อความ</button><button class="btn" type="button" data-pclose>ยกเลิก</button></div>`;
+  const refreshExisting=()=>{const d=$("#pDate").value,sid=$("#pShow").value;const ex=D.Schedule.filter(x=>x.date===d&&(sid==="__new"||x.showId===sid));
+    const sample=ex.some(x=>/^\(ตัวอย่าง\)/.test(x.item));
+    $("#pExisting").innerHTML=ex.length?`<label class="pinl block"><input type="checkbox" id="pReplace"${sample?" checked":""}> ลบคิวเดิมของวันนี้ก่อน (${ex.length} คิว${sample?" · เป็นตัวอย่าง":""})</label>`:""};
+  $("#pDate").onchange=()=>{const c=showsOnDate($("#pDate").value);$("#pShow").value=c[0]?.id||"__new";refreshExisting()};
+  $("#pShow").onchange=refreshExisting; refreshExisting();
+  $("#pBack").onclick=()=>{const t=IMP.text;openImport();$("#pText").value=t};
+  $("#pSave").onclick=saveImport;
+}
+async function saveImport(){
+  const btn=$("#pSave"); btn.disabled=true; $("#pErr").textContent="";
+  try{
+    const d=$("#pDate").value; if(!okDate(d)) throw new Error("ใส่วันที่ก่อน");
+    let sid=$("#pShow").value; const ops=[];
+    const sv={};["name","venue","map","setTime","setLen","notes"].forEach(k=>sv[k]=$("#ps_"+k).value.trim());
+    if(sid==="__new"){
+      sid=nextId("Shows","S"); const o={id:sid,date:d,status:"Confirmed",type:"Event",...sv}; if(!o.name)o.name=o.venue||"งานใหม่";
+      ops.push({action:"add",tab:"Shows",values:KEYS.Shows.map(k=>o[k]||"")});
+    }else if($("#pShowUpd").checked){
+      const s=D.Shows.find(x=>x.id===sid); const full={...s};
+      Object.entries(sv).forEach(([k,v])=>{if(v)full[k]=v});
+      if(sv.venue&&!full.city)full.city="";
+      ops.push({action:"update",tab:"Shows",row:s._row,old:s._old,values:KEYS.Shows.map(k=>full[k]??"")});
+    }
+    if($("#pReplace")?.checked){D.Schedule.filter(x=>x.date===d&&x.showId===sid).forEach(x=>ops.push({action:"delete",tab:"Schedule",row:x._row,old:x._old}))}
+    document.querySelectorAll("#pBody .prow").forEach(row=>{
+      if(!row.querySelector(".pchk").checked)return;
+      const g=c=>row.querySelector(c).value.trim();
+      const it={showId:sid,date:d,time:g(".pin-t"),end:g(".pin-e"),item:g(".pin-i"),cat:g(".pin-c"),who:g(".pin-w")||"ทุกคน",loc:g(".pin-l"),notes:g(".pin-n")};
+      if(!it.item)return; ops.push({action:"add",tab:"Schedule",values:KEYS.Schedule.map(k=>it[k]||"")});
+    });
+    if($("#pTravel")?.checked){const v=IMP.r.van;const first=v[0];const arr=(IMP.r.items.find(x=>x.cat==="Lobby"&&/ถึงหน้างาน/.test(x.item))||{}).time||"";
+      const tr={id:nextId("Travel","T"),showId:sid,date:d,type:"Van",no:"รถตู้",from:v.map(p=>p.addr||p.label).join(" / "),to:sv.venue||"",dep:first.time,arr,who:"",pickup:v.map(p=>`จุด ${p.no} ${p.addr||p.label} (${p.time})`).join(" · "),notes:v.map(p=>p.phone).filter(Boolean).join(" · ")};
+      ops.push({action:"add",tab:"Travel",values:KEYS.Travel.map(k=>tr[k]||"")})}
+    if(!ops.length) throw new Error("ไม่มีรายการให้บันทึก");
+    const json=await post({pin:store.get("pun-pin"),action:"batch",ops});
+    closeImport(); VIEW="days"; DAY=d; history.replaceState(null,"","#d-"+d); applyServer(json);
+  }catch(e){$("#pErr").textContent=e.message||"บันทึกไม่สำเร็จ";if(/PIN/.test(e.message||"")){store.del("pun-pin");exitEdit()}}
+  finally{btn.disabled=false}
+}
+document.addEventListener("click",e=>{if(e.target.closest("[data-pclose]")){closeImport()}else if(e.target.id==="pModal"){closeImport()}});
 
 /* ===== install (PWA) ===== */
 let deferred=null;
@@ -519,6 +740,7 @@ document.addEventListener("click",e=>{
 window.addEventListener("hashchange",render);
 $("#editToggle").onclick=()=>editing()?exitEdit():enterEdit();
 $("#lockBtn").onclick=()=>{exitEdit();toast("ออกจากโหมดแก้ไขแล้ว")};
+$("#pasteBtn").onclick=openImport;
 $("#reloadBtn").onclick=async()=>{await load();render();toast("โหลดข้อมูลล่าสุดแล้ว")};
 document.addEventListener("visibilitychange",async()=>{if(document.visibilityState==="visible"&&LIVE&&!FORM){await load();render()}});
 
