@@ -155,6 +155,14 @@ main{padding:20px 22px 48px;min-width:0}
 .callist .lrow{grid-template-columns:86px 1fr}
 .callist .lrow .pill{display:none}
 @media(min-width:760px){.cal{padding:18px}.cd{min-height:104px;padding:7px}.cd .ev{font-size:12px;padding:3px 7px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.calgrid{gap:6px}}
+.roster{display:grid;gap:10px}
+.rg{display:grid;gap:2px}
+.rgh{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.02em;margin:4px 0 2px}
+.rrow{display:grid;grid-template-columns:minmax(70px,auto) 1fr auto;gap:10px;align-items:baseline;padding:6px 10px;border-radius:10px;background:var(--panel);border:1px solid transparent;text-align:left;width:100%}
+button.rrow{cursor:pointer;border-color:var(--line)}
+.rrow.me{background:var(--ink);color:#fff}.rrow.me .rr{color:#ddd}
+.rn{font-weight:600}.rr{color:var(--muted);font-size:13px}
+@media(min-width:760px){.roster.wide{grid-template-columns:repeat(2,1fr)}}
 h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 12px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
@@ -384,6 +392,13 @@ function crewFor(shows){const names=new Set();let any=false;
   const known=realCrew().filter(c=>names.has(c.short)||names.has(c.name));const kn=new Set(known.flatMap(c=>[c.short,c.name]));
   const extra=[...names].filter(n=>!kn.has(n)).map(n=>({name:n,short:n,role:"",group:"",_extra:true}));
   return {list:[...known,...extra],custom:true};}
+const GROUP_TH={Artist:"Artist",Band:"Band",Crew:"Tech Crew",Management:"Management / A&R"};
+function crewRoster(list){if(!list.length)return '<span class="sub">ยังไม่ได้เลือกคน</span>';
+  const order=["Artist","Band","Crew","Management"];const groups={};list.forEach(c=>{const g=c.group||"Other";(groups[g]=groups[g]||[]).push(c)});
+  const keys=Object.keys(groups).sort((a,b)=>(order.indexOf(a)+1||9)-(order.indexOf(b)+1||9));
+  return keys.map(g=>`<div class="rg"><div class="rgh">${esc(GROUP_TH[g]||g)} · ${groups[g].length}</div>${groups[g].map(c=>{const mine=me()&&c.name===me();const role=c.role?esc(c.role):'<span class="sub">No role yet</span>';
+    const inner=`<span class="rn">${esc(c.short||c.name)}</span><span class="rr">${role}</span>`;
+    return editing()&&!c._extra?`<button type="button" class="rrow" data-edit="Crew" data-i="${idx("Crew",c)}">${inner}<span class="sub">✎</span></button>`:`<div class="rrow${mine?" me":""}">${inner}</div>`}).join("")}</div>`).join("")}
 const edBtn=(t,o,label="✎ แก้")=>`<button class="ed" type="button" data-edit="${t}" data-i="${idx(t,o)}">${label}</button>`;
 const addBtn=(t,label,preset)=>`<button class="ed" type="button" data-add="${t}" data-preset="${esc(JSON.stringify(preset||{}))}">${label}</button>`;
 
@@ -423,7 +438,7 @@ function renderDay(s){
   const links=D.Links.filter(l=>sh.some(x=>x.id===l.showId));
   if(links.length)L+=`<div class="box"><h3>Docs</h3>${links.map(l=>`<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(l.label)}</span>${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">เปิด</a>`:`<span class="waiting">รอลิงก์</span>`}</div>`).join("")}</div>`;
   const cf=crewFor(sh);
-  L+=`<div class="box"><div class="boxhead"><h3>Crew · ${cf.list.length}${cf.custom?" (ทีมงานนี้)":""}</h3><span>${sh.length?`<button class="ed" type="button" data-crewpick="${idx("Shows",sh[0])}">✎ เลือกทีมงานนี้</button>`:""}${addBtn("Crew","+ เพิ่มคน",{group:"Crew"})}</span></div><div class="chips">${cf.list.map(c=>editing()&&!c._extra?`<button type="button" class="chip" data-edit="Crew" data-i="${idx("Crew",c)}" title="แก้ข้อมูล ${esc(c.short||c.name)}">✎ ${esc(c.short||c.name)}</button>`:`<span class="chip${me()&&(c.name===me())?" me":""}" title="${esc(c.role)}">${esc(c.short||c.name)}</span>`).join("")||'<span class="sub">ยังไม่ได้เลือกคน</span>'}</div>${cf.custom&&!editing()?"":""}</div>`;
+  L+=`<div class="box"><div class="boxhead"><h3>Crew · ${cf.list.length}${cf.custom?" (ทีมงานนี้)":""}</h3><span>${sh.length?`<button class="ed" type="button" data-crewpick="${idx("Shows",sh[0])}">✎ เลือกทีมงานนี้</button>`:""}${addBtn("Crew","+ เพิ่มคน",{group:"Crew"})}</span></div><div class="roster">${crewRoster(cf.list)}</div>${cf.custom&&!editing()?"":""}</div>`;
   L+=`</div>`;
 
   const items=D.Schedule.filter(r=>r.date===s).sort((a,b)=>(mins(a.time)??9999)-(mins(b.time)??9999));
