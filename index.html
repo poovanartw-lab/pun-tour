@@ -328,7 +328,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}, del(k){try{localStorage.removeItem(k)}catch(e){}} };
 
 const KEYS = {
-  Shows:["id","date","endDate","name","type","venue","city","address","map","setTime","setLen","others","contact","contactPhone","hotelId","status","notes","crew","loadIn"],
+  Shows:["id","date","endDate","name","type","venue","city","address","map","setTime","setLen","others","contact","contactPhone","hotelId","status","notes","crew","loadIn","room"],
   Schedule:["showId","date","time","end","item","cat","who","loc","notes"],
   Travel:["id","showId","date","type","no","from","to","dep","arr","who","driver","driverPhone","pickup","ref","notes"],
   Hotels:["id","showId","name","address","phone","checkin","checkout","map","rooms","notes"],
@@ -343,7 +343,7 @@ const FIELDS = {
   Schedule:[["showId","งาน","show"],["date","วันที่","date"],["time","เวลา","time"],["end","ถึงเวลา","time"],["item","รายการ","text",1],["cat","ประเภท","sel:"+CATS.join(",")],["loc","สถานที่","text"],["who","ใครเกี่ยวข้อง","who",1],["notes","หมายเหตุ","text",1]],
   Travel:[["id","รหัส","auto:T"],["showId","งาน","show"],["date","วันที่","date"],["type","ประเภท","sel:Flight,Van,Car,Bus,Train,Boat"],["no","เลขไฟลต์ / ทะเบียนรถ","text",1],["from","จาก","text"],["to","ไป","text"],["dep","ออก","time"],["arr","ถึง","time"],["who","ใครไปเที่ยวนี้","who",1],["driver","คนขับ","text"],["driverPhone","เบอร์คนขับ","tel"],["pickup","จุดรับ","text",1],["ref","Booking ref","text"],["notes","หมายเหตุ","text"]],
   Hotels:[["id","รหัส","auto:H"],["showId","งาน","show"],["name","ชื่อโรงแรม","text",1],["address","ที่อยู่","text",1],["phone","เบอร์โรงแรม","tel"],["map","ลิงก์แผนที่","url"],["checkin","เช็กอิน","date"],["checkout","เช็กเอาต์","date"],["rooms","ห้อง / ใครพัก","text",1],["notes","หมายเหตุ","text",1]],
-  Shows:[["id","รหัส","auto:S"],["status","สถานะ","sel:Confirmed,TBC,Cancelled"],["date","วันที่","date"],["endDate","ถึงวันที่ (ถ้าหลายวัน)","date"],["name","ชื่องาน","text",1],["type","ประเภท","sel:Show,Festival,Pub,Event,Private"],["venue","Venue","text"],["city","เมือง","text"],["address","ที่อยู่","text",1],["map","ลิงก์แผนที่","url",1],["setTime","เวลาขึ้นโชว์","time"],["setLen","ความยาว (นาที)","number"],["others","ศิลปินร่วมเวที","text",1],["contact","ผู้ติดต่อหน้างาน","text"],["contactPhone","เบอร์ผู้ติดต่อ","tel"],["hotelId","Hotel ID","text"],["loadIn","จุดโหลด / ที่จอดรถ","text",1],["notes","หมายเหตุ","text",1],["crew","ทีมที่ไปงานนี้ (ไม่เลือก = ทุกคน)","crew",1]]
+  Shows:[["id","รหัส","auto:S"],["status","สถานะ","sel:Confirmed,TBC,Cancelled"],["date","วันที่","date"],["endDate","ถึงวันที่ (ถ้าหลายวัน)","date"],["name","ชื่องาน","text",1],["type","ประเภท","sel:Show,Festival,Pub,Event,Private"],["venue","Venue","text"],["city","เมือง","text"],["address","ที่อยู่","text",1],["map","ลิงก์แผนที่","url",1],["setTime","เวลาขึ้นโชว์","time"],["setLen","ความยาว (นาที)","number"],["others","ศิลปินร่วมเวที","text",1],["contact","ผู้ติดต่อหน้างาน","text"],["contactPhone","เบอร์ผู้ติดต่อ","tel"],["hotelId","Hotel ID","text"],["loadIn","จุดโหลด / ที่จอดรถ","text",1],["room","ห้องพัก / Green room (ที่หน้างาน)","text",1],["notes","หมายเหตุ","text",1],["crew","ทีมที่ไปงานนี้ (ไม่เลือก = ทุกคน)","crew",1]]
 };
 FIELDS.Setlist=[["showId","งาน","show"],["seq","ลำดับในลิสต์","number"],["no","เลขเพลง (ว่าง = ช่วงพูด/คั่น)","text"],["song","ชื่อเพลง / ช่วง","text",1],["key","คีย์","text"],["ver","เวอร์ชัน","text"],["notes","หมายเหตุ","text",1]];
 FIELDS.Crew=[["name","ชื่อ (ชื่อจริงหรือชื่อเล่น)","text",1],["short","ชื่อที่โชว์ในเว็บ","text"],["group","กลุ่ม","sel:Band,Crew,Management,Artist"],["role","ตำแหน่ง","text",1],["notes","หมายเหตุ","text",1]];
@@ -508,7 +508,7 @@ function renderDay(s){
   sh.forEach(x=>{L+=`<div class="box show"><div class="boxhead"><h3>Show</h3>${edBtn("Shows",x)}</div><div class="big">${esc(x.name)}</div>
     <div class="sub">${esc([x.venue,x.city].filter(Boolean).join(" · "))}${x.address?"<br>"+esc(x.address):""}</div>
     <div class="sub" style="margin-top:4px">${x.setTime?`ขึ้นโชว์ <b class="mono">${esc(x.setTime)}</b>${x.setLen?" · "+esc(x.setLen)+" นาที":""}`:`<span class="waiting">เวลาโชว์: รอข้อมูล</span>`}</div>
-    ${x.others?`<div class="sub">ร่วมเวที: ${esc(x.others)}</div>`:""}${x.contact?`<div class="sub">ผู้ติดต่อ: ${esc(x.contact)} ${esc(x.contactPhone)}</div>`:""}${x.loadIn?`<div class="sub">🚚 จุดโหลด: ${esc(x.loadIn)}</div>`:""}
+    ${x.others?`<div class="sub">ร่วมเวที: ${esc(x.others)}</div>`:""}${x.contact?`<div class="sub">ผู้ติดต่อ: ${esc(x.contact)} ${esc(x.contactPhone)}</div>`:""}${x.loadIn?`<div class="sub">🚚 จุดโหลด: ${esc(x.loadIn)}</div>`:""}${x.room?`<div class="sub">🚪 ห้องพัก: ${esc(x.room)}</div>`:""}
     <div class="sub">${mapLink(x.venue||x.name,x.map,[x.address,x.city].join(" "))}</div>${x.notes?`<div class="sub" style="margin-top:4px">${linkify(x.notes)}</div>`:""}</div>`});
   sh.forEach(x=>{const sl=setlistOf(x.id);if(!sl.length&&!editing())return;const songs=sl.filter(r=>r.no).length;
     L+=`<div class="box setlist"><div class="boxhead"><h3>Setlist${sh.length>1?" · "+esc(x.name):""} · ${songs} เพลง</h3>${addBtn("Setlist","+ เพิ่ม",{showId:x.id,seq:nextSeq(x.id)})}</div>${sl.map(r=>r.no?`<div class="sl"><span class="sl-n">${esc(r.no)}</span><span class="sl-s">${esc(r.song)}${r.ver?` <small>${esc(r.ver)}</small>`:""}${r.notes?` <small>· ${esc(r.notes)}</small>`:""}</span>${r.key?`<span class="sl-k">${esc(r.key)}</span>`:""}${edBtn("Setlist",r,"✎")}</div>`:`<div class="sl seg"><span>${/^[—–-]+$/.test(r.song)?"":esc(r.song)}</span>${edBtn("Setlist",r,"✎")}</div>`).join("")||'<div class="sub">ยังไม่มีลิสต์เพลง</div>'}</div>`});
@@ -542,7 +542,7 @@ function renderDay(s){
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v17</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v18</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
   $("#printBtn").onclick=()=>{const t=document.title;document.title=printTitle();try{window.print()}catch(e){}setTimeout(()=>{document.title=t},1000)};
@@ -573,7 +573,8 @@ function copyDay(s,sh,items){const L=[`📅 ${dt(s).toLocaleDateString("th-TH",{
     const mp=x.map||(x.venue?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([x.venue,x.address,x.city].filter(Boolean).join(" ")):"");
     if(mp)L.push(`📍 แผนที่: ${mp}`);
     if(x.contact||x.contactPhone)L.push(`☎️ ${[x.contact,x.contactPhone].filter(Boolean).join(" ")}`);
-    if(x.loadIn)L.push(`🚚 จุดโหลด / ที่จอดรถ: ${x.loadIn}`);});
+    if(x.loadIn)L.push(`🚚 จุดโหลด / ที่จอดรถ: ${x.loadIn}`);
+    if(x.room)L.push(`🚪 ห้องพัก: ${x.room}`);});
   const ht=hotelFor(s);if(ht)L.push(`🛏 ${strip(ht.name)}`);
   sh.forEach(x=>{const sl=setlistOf(x.id);if(sl.length){L.push("🎵 Setlist");sl.forEach(r=>L.push(r.no?`  ${r.no}. ${r.song}${r.key?" ("+r.key+")":""}${r.ver?" "+r.ver:""}`:(/^[—–-]+$/.test(r.song)?"  ———":`  — ${r.song} —`)))}});
   if(sh.length){const cf=crewFor(sh);if(cf.list.length){L.push("",`👥 ทีมงาน (${cf.list.length} คน)`);
