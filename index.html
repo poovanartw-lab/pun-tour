@@ -456,17 +456,24 @@ function gearBox(shows){
       h+=`</div>`});
     h+=`<div class="gprint"><table><thead><tr><th>ของ</th><th>จำนวน</th><th>ขาไป</th><th>ขากลับ</th></tr></thead><tbody>${cats.map(c=>`<tr class="pc"><td colspan="4">${esc(c)}</td></tr>`+list.filter(g=>(g.cat||"Other")===c).map(g=>{const o=out.get(g.id),b=back.get(g.id);return `<tr><td><b>${esc(g.item)}</b>${g.showId?" (เฉพาะงานนี้)":""}${g.detail?`<br><small>${esc(g.detail)}</small>`:""}</td><td>${esc(g.qty)}</td><td>${o?"☑ "+esc(o.by||""):"☐"}</td><td>${b?"☑ "+esc(b.by||""):"☐"}</td></tr>`}).join("")).join("")}</tbody></table></div>`;
     return h+`</section>`}).join("")}
+function refreshGear(){
+  if(VIEW!=="days"){render();return}
+  const old=[...document.querySelectorAll(".gear")];if(!old.length){render();return}
+  const y=window.scrollY;const tmp=document.createElement("div");tmp.innerHTML=gearBox(showsOn(DAY));
+  old[0].replaceWith(...tmp.children);old.slice(1).forEach(e=>e.remove());
+  if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y);
+}
 async function tickGear(sid,gid){
   const ph=GPHASE;const i=D.GearCheck.findIndex(r=>r.showId===sid&&r.gearId===gid&&r.phase===ph);const checked=i<0;
   const by=me()?(person(me())?.short||me()):"";
   const now=new Date();const rec={showId:sid,gearId:gid,phase:ph,by,time:`${iso(now)} ${pad(now.getHours())}:${pad(now.getMinutes())}`};
   if(checked)D.GearCheck.push(rec);else D.GearCheck.splice(i,1);
-  render();
-  if(!LIVE){toast("ออฟไลน์อยู่ ติ๊กไม่ได้");if(checked)D.GearCheck.pop();else D.GearCheck.push(rec);render();return}
+  refreshGear();
+  if(!LIVE){toast("ออฟไลน์อยู่ ติ๊กไม่ได้");if(checked)D.GearCheck.pop();else D.GearCheck.push(rec);refreshGear();return}
   GPENDING++;
   try{const json=await post({action:"tick",showId:sid,gearId:gid,phase:ph,checked,by});GPENDING--;
-    if(!GPENDING){build(fromApi(json));store.set("pun-cache",JSON.stringify(json));render()}}
-  catch(e){GPENDING--;toast("ติ๊กไม่สำเร็จ: "+e.message);await load();render()}
+    if(!GPENDING){build(fromApi(json));store.set("pun-cache",JSON.stringify(json));refreshGear()}}
+  catch(e){GPENDING--;toast("ติ๊กไม่สำเร็จ: "+e.message);await load();refreshGear()}
 }
 /* ===== views ===== */
 let VIEW="days",DAY=null,CALM=todayISO().slice(0,7);
@@ -479,7 +486,7 @@ function renderSide(){const days=allDays();const t=todayISO();
   $("#side").innerHTML=days.map(s=>{const [k,l]=dayKind(s);const sh=showsOn(s);
     const tr=travelOn(s);const sub=sh.length?sh.map(x=>x.venue||x.name).join(" / ")+(sh[0].city?" · "+sh[0].city:""):tr.length?tr[0].from+" → "+tr[tr.length-1].to:"";
     return `<button class="dayitem${s<t?" past":""}" type="button" data-day="${s}" aria-current="${s===DAY}"><span class="d">${fShort(s)}</span><span class="pill ${k}">${l}</span><span class="s">${esc(sub)}</span></button>`}).join("");
-  const cur=$("#side [aria-current='true']");if(cur)cur.scrollIntoView({block:"nearest",inline:"nearest"})}
+  const cur=$("#side [aria-current='true']");if(cur){const sd=$("#side");const a=cur.offsetLeft-sd.offsetLeft,b=cur.offsetTop-sd.offsetTop;if(a<sd.scrollLeft||a+cur.offsetWidth>sd.scrollLeft+sd.clientWidth)sd.scrollLeft=a-12;if(b<sd.scrollTop||b+cur.offsetHeight>sd.scrollTop+sd.clientHeight)sd.scrollTop=b-12}}
 
 function renderDay(s){
   const sh=showsOn(s),tr=travelOn(s).filter(r=>matches(r.who)),[,kl]=dayKind(s);
@@ -875,8 +882,8 @@ document.addEventListener("click",e=>{
   const ed=e.target.closest("[data-edit]");if(ed){e.stopPropagation();editRecord(ed.dataset.edit,D[ed.dataset.edit][+ed.dataset.i]);return}
   const ad=e.target.closest("[data-add]");if(ad){e.stopPropagation();addRecord(ad.dataset.add,JSON.parse(ad.dataset.preset||"{}"));return}
   const tk=e.target.closest("[data-tick]");if(tk){const [a,b]=tk.dataset.tick.split("|");tickGear(a,b);return}
-  const gp=e.target.closest("[data-gphase]");if(gp){GPHASE=gp.dataset.gphase;render();return}
-  const gc=e.target.closest("[data-gcat]");if(gc){const k=gc.dataset.gcat;GOPEN.has(k)?GOPEN.delete(k):GOPEN.add(k);render();return}
+  const gp=e.target.closest("[data-gphase]");if(gp){GPHASE=gp.dataset.gphase;refreshGear();return}
+  const gc=e.target.closest("[data-gcat]");if(gc){const k=gc.dataset.gcat;GOPEN.has(k)?GOPEN.delete(k):GOPEN.add(k);refreshGear();return}
   const cn=e.target.closest("[data-calnav]");if(cn){const [y,m]=CALM.split("-").map(Number);const k=+cn.dataset.calnav;CALM=k?iso(new Date(y,m-1+k,1)).slice(0,7):todayISO().slice(0,7);setHash();return}
   const d=e.target.closest("[data-day]");if(d){VIEW="days";DAY=d.dataset.day;setHash();window.scrollTo(0,0);return}
   const tb=e.target.closest(".tab");if(tb){VIEW=tb.dataset.view;setHash()}});
