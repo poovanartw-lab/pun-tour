@@ -163,6 +163,31 @@ button.rrow{cursor:pointer;border-color:var(--line)}
 .rrow.me{background:var(--ink);color:#fff}.rrow.me .rr{color:#ddd}
 .rn{font-weight:600}.rr{color:var(--muted);font-size:13px}
 @media(min-width:760px){.roster.wide{grid-template-columns:repeat(2,1fr)}}
+.gear{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
+.ghead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.ghead b{font-family:var(--font-display);font-size:17px}
+.gseg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--grey);border-radius:999px;padding:4px}
+.gseg button{border:0;background:transparent;border-radius:999px;padding:8px;font-weight:600;cursor:pointer}
+.gseg button[aria-selected="true"]{background:var(--ink);color:#fff}
+.gseg button span{font-weight:500;opacity:.75;margin-left:4px;font-variant-numeric:tabular-nums}
+.gbar{height:6px;background:var(--grey);border-radius:999px;margin:10px 0 6px;overflow:hidden}.gbar i{display:block;height:100%;background:var(--ink);border-radius:999px;transition:width .2s}
+.gcat{border-top:1px solid var(--line)}
+.gch{display:grid;grid-template-columns:1fr auto 18px;gap:8px;width:100%;border:0;background:none;padding:11px 2px;font-weight:600;text-align:left;cursor:pointer}
+.gcat.full .gch span:first-child{color:var(--muted)}
+.gn{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:500}.gcat.full .gn{color:var(--ink);font-weight:600}
+.car{color:var(--muted)}
+.gi{display:flex;align-items:flex-start;gap:4px;padding:2px 0 6px}
+.gtk{flex:1;display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:start;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:9px 10px;text-align:left;cursor:pointer;min-width:0}
+.gtk .gbox{width:24px;height:24px;border-radius:8px;border:2px solid #b9b3a8;display:grid;place-items:center;font-weight:700;font-size:14px;background:#fff}
+.gi.on .gtk{background:var(--card)}
+.gi.on .gbox{background:var(--ink);border-color:var(--ink);color:#fff}
+.gi.on .gt b{text-decoration:line-through;text-decoration-color:#9a948a;color:var(--muted)}
+.gt{display:grid;gap:2px;min-width:0}.gt small{color:var(--muted);font-size:12px;line-height:1.35}.gt em{font-style:normal;font-size:11px;color:var(--muted)}
+.gx{display:inline-block;font-size:10.5px;font-weight:600;background:var(--grey);border-radius:999px;padding:1px 7px;vertical-align:1px;text-decoration:none}
+.gadd{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 10px}.gadd .ed{white-space:nowrap}
+.gq{font-size:12px;color:var(--muted);white-space:nowrap}
+.gi .ed{margin-top:8px}
+@media print{.gear{display:none}}
 h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 12px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
@@ -291,7 +316,7 @@ body.editing button.chip{cursor:pointer}body.editing button.chip:hover{border-co
 const CONFIG = { API: (window.PUN_API||"").trim(), SHEET_URL: "https://docs.google.com/spreadsheets/d/1_rbN1QnNus-q8VO694cj5tmxW3bLWBd4SfufwiURBgY/edit" };
 const SNAPSHOT = null;
 const SNAPSHOT_TIME = "";
-const TABS = ["Shows","Schedule","Travel","Hotels","Crew","Links","Setlist"];
+const TABS = ["Shows","Schedule","Travel","Hotels","Crew","Links","Setlist","Gear","GearCheck"];
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -304,7 +329,9 @@ const KEYS = {
   Hotels:["id","showId","name","address","phone","checkin","checkout","map","rooms","notes"],
   Crew:["name","short","role","group","phone","line","passport","notes"],
   Links:["showId","label","url","notes"],
-  Setlist:["showId","seq","no","song","key","ver","notes"]
+  Setlist:["showId","seq","no","song","key","ver","notes"],
+  Gear:["id","cat","item","detail","qty","showId"],
+  GearCheck:["showId","gearId","phase","by","time"]
 };
 const CATS = ["Lobby","Van","Flight","Airport","Hotel","Show","Soundcheck","Meal","Press","Other"];
 const FIELDS = {
@@ -315,7 +342,8 @@ const FIELDS = {
 };
 FIELDS.Setlist=[["showId","งาน","show"],["seq","ลำดับในลิสต์","number"],["no","เลขเพลง (ว่าง = ช่วงพูด/คั่น)","text"],["song","ชื่อเพลง / ช่วง","text",1],["key","คีย์","text"],["ver","เวอร์ชัน","text"],["notes","หมายเหตุ","text",1]];
 FIELDS.Crew=[["name","ชื่อ (ชื่อจริงหรือชื่อเล่น)","text",1],["short","ชื่อที่โชว์ในเว็บ","text"],["group","กลุ่ม","sel:Band,Crew,Management,Artist"],["role","ตำแหน่ง","text",1],["notes","หมายเหตุ","text",1]];
-const TITLES = {Setlist:"เพลง",Schedule:"คิวเวลา",Travel:"การเดินทาง",Hotels:"โรงแรม",Shows:"งาน",Crew:"คนในทีม"};
+FIELDS.Gear=[["id","รหัส","auto:G"],["showId","ใช้กับงาน","showall"],["cat","หมวด","sel:Drum,Bass,Guitar,Keyboard,Pun,System,Other"],["item","ชื่อของ","text",1],["detail","รายละเอียด / ของในกล่อง","text",1],["qty","จำนวน","text"]];
+const TITLES = {Gear:"ของ",Setlist:"เพลง",Schedule:"คิวเวลา",Travel:"การเดินทาง",Hotels:"โรงแรม",Shows:"งาน",Crew:"คนในทีม"};
 
 let D = null, SOURCE = "", LIVE = false;
 
@@ -402,6 +430,39 @@ function crewRoster(list){if(!list.length)return '<span class="sub">ยังไ
 const edBtn=(t,o,label="✎ แก้")=>`<button class="ed" type="button" data-edit="${t}" data-i="${idx(t,o)}">${label}</button>`;
 const addBtn=(t,label,preset)=>`<button class="ed" type="button" data-add="${t}" data-preset="${esc(JSON.stringify(preset||{}))}">${label}</button>`;
 
+
+/* ===== gear checklist ===== */
+let GPHASE="out",GPENDING=0;const GOPEN=new Set();
+const GEARCATS=["Drum","Bass","Guitar","Keyboard","Pun","System","Other"];
+const gearTicks=(sid,ph)=>{const m=new Map();D.GearCheck.forEach(r=>{if(r.showId===sid&&r.phase===ph)m.set(r.gearId,r)});return m};
+function gearBox(shows){
+  if(!D.Gear.length&&!editing())return "";
+  return shows.filter(x=>x.status!=="Cancelled").map(x=>{
+    const list=D.Gear.filter(g=>!g.showId||g.showId===x.id);const ids=new Set(list.map(g=>g.id));
+    const cnt=m=>[...m.keys()].filter(k=>ids.has(k)).length;
+    const out=gearTicks(x.id,"out"),back=gearTicks(x.id,"back"),cur=GPHASE==="out"?out:back,tot=list.length,nc=cnt(cur);
+    const cats=GEARCATS.filter(c=>list.some(g=>(g.cat||"Other")===c)).concat([...new Set(list.map(g=>g.cat||"Other"))].filter(c=>!GEARCATS.includes(c)));
+    const done=nc>=tot&&tot>0;const extra=list.filter(g=>g.showId).length;
+    let h=`<section class="gear"><div class="ghead"><div><b>Gear Checklist${shows.length>1?" · "+esc(x.name):""}</b><div class="sub">${done?"✓ ครบแล้ว":`เหลืออีก ${tot-nc} ชิ้น`}${extra?` · ของเฉพาะงานนี้ ${extra}`:""}${me()?"":" · เลือกชื่อใน “ดูตารางของ” เพื่อบันทึกว่าใครติ๊ก"}</div></div></div><div class="gadd">${addBtn("Gear","+ ของทุกงาน",{})}${addBtn("Gear","+ เฉพาะงานนี้",{showId:x.id})}</div>
+    <div class="gseg" role="tablist"><button type="button" data-gphase="out" aria-selected="${GPHASE==="out"}">ขาไป <span>${cnt(out)}/${tot}</span></button><button type="button" data-gphase="back" aria-selected="${GPHASE==="back"}">ขากลับ <span>${cnt(back)}/${tot}</span></button></div>
+    <div class="gbar"><i style="width:${tot?Math.round(nc/tot*100):0}%"></i></div>`;
+    cats.forEach(c=>{const items=list.filter(g=>(g.cat||"Other")===c);const n=items.filter(g=>cur.has(g.id)).length;const key=x.id+"|"+c;const open=GOPEN.has(key);
+      h+=`<div class="gcat${n===items.length?" full":""}"><button type="button" class="gch" data-gcat="${esc(key)}" aria-expanded="${open}"><span>${esc(c)}</span><span class="gn">${n}/${items.length}${n===items.length?" ✓":""}</span><span class="car">${open?"▴":"▾"}</span></button>`;
+      if(open)h+=items.map(g=>{const t=cur.get(g.id);return `<div class="gi${t?" on":""}"><button type="button" class="gtk" data-tick="${esc(x.id)}|${esc(g.id)}" aria-pressed="${!!t}"><span class="gbox">${t?"✓":""}</span><span class="gt"><b>${esc(g.item)}${g.showId?` <span class="gx">เฉพาะงานนี้</span>`:""}</b>${g.detail?`<small>${esc(g.detail)}</small>`:""}${t?`<em>✓ ${esc(t.by||"")} ${esc((t.time||"").slice(11))}</em>`:""}</span><span class="gq">${esc(g.qty)}</span></button>${edBtn("Gear",g,"✎")}</div>`}).join("");
+      h+=`</div>`});
+    return h+`</section>`}).join("")}
+async function tickGear(sid,gid){
+  const ph=GPHASE;const i=D.GearCheck.findIndex(r=>r.showId===sid&&r.gearId===gid&&r.phase===ph);const checked=i<0;
+  const by=me()?(person(me())?.short||me()):"";
+  const now=new Date();const rec={showId:sid,gearId:gid,phase:ph,by,time:`${iso(now)} ${pad(now.getHours())}:${pad(now.getMinutes())}`};
+  if(checked)D.GearCheck.push(rec);else D.GearCheck.splice(i,1);
+  render();
+  if(!LIVE){toast("ออฟไลน์อยู่ ติ๊กไม่ได้");if(checked)D.GearCheck.pop();else D.GearCheck.push(rec);render();return}
+  GPENDING++;
+  try{const json=await post({action:"tick",showId:sid,gearId:gid,phase:ph,checked,by});GPENDING--;
+    if(!GPENDING){build(fromApi(json));store.set("pun-cache",JSON.stringify(json));render()}}
+  catch(e){GPENDING--;toast("ติ๊กไม่สำเร็จ: "+e.message);await load();render()}
+}
 /* ===== views ===== */
 let VIEW="days",DAY=null,CALM=todayISO().slice(0,7);
 function setHash(){const h=VIEW==="days"?(DAY?"d-"+DAY:""):VIEW==="cal"?"cal-"+CALM:VIEW; if(location.hash.slice(1)!==h) location.hash=h; else render();}
@@ -459,7 +520,7 @@ function renderDay(s){
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section></div><div class="foot">${esc(SOURCE)}</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)}</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
   $("#printBtn").onclick=()=>{try{window.print()}catch(e){}};
@@ -513,6 +574,7 @@ function nextId(tab,prefix){let n=0;D[tab].forEach(o=>{const m=new RegExp("^"+pr
 let FORM=null, FORM_SHOW="";
 function fieldHtml(f,val){
   const [k,label,type,full]=f; const id="f_"+k; const cls="f"+(full?" full":"");
+  if(type==="showall") return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}"><option value="">ทุกงาน (ของประจำ)</option>${[...D.Shows].sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`<option value="${esc(s.id)}"${s.id===val?" selected":""}>เฉพาะ ${fShort(s.date)} · ${esc(s.name)}</option>`).join("")}</select></div>`;
   if(type==="show") return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}"><option value="">-</option>${[...D.Shows].sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`<option value="${esc(s.id)}"${s.id===val?" selected":""}>${esc(s.id)} · ${fShort(s.date)} · ${esc(s.name)}</option>`).join("")}</select></div>`;
   if(type.startsWith("sel:")) return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}">${type.slice(4).split(",").map(o=>`<option value="${o}"${o===val?" selected":""}>${k==="cat"?CATLAB[o]+" ("+o+")":o}</option>`).join("")}</select></div>`;
   if(type==="who"){const sid=$("#f_showId")?.value||FORM_SHOW;const shw=D.Shows.find(s=>s.id===sid);const pool=shw?crewFor([shw]).list:realCrew();const toks=["ทุกคน","Artist","Band","Crew","Management",...pool.map(c=>c.short||c.name)];
@@ -807,6 +869,9 @@ document.addEventListener("click",e=>{
   const cp=e.target.closest("[data-crewpick]");if(cp){e.stopPropagation();editRecord("Shows",D.Shows[+cp.dataset.crewpick],["crew"]);return}
   const ed=e.target.closest("[data-edit]");if(ed){e.stopPropagation();editRecord(ed.dataset.edit,D[ed.dataset.edit][+ed.dataset.i]);return}
   const ad=e.target.closest("[data-add]");if(ad){e.stopPropagation();addRecord(ad.dataset.add,JSON.parse(ad.dataset.preset||"{}"));return}
+  const tk=e.target.closest("[data-tick]");if(tk){const [a,b]=tk.dataset.tick.split("|");tickGear(a,b);return}
+  const gp=e.target.closest("[data-gphase]");if(gp){GPHASE=gp.dataset.gphase;render();return}
+  const gc=e.target.closest("[data-gcat]");if(gc){const k=gc.dataset.gcat;GOPEN.has(k)?GOPEN.delete(k):GOPEN.add(k);render();return}
   const cn=e.target.closest("[data-calnav]");if(cn){const [y,m]=CALM.split("-").map(Number);const k=+cn.dataset.calnav;CALM=k?iso(new Date(y,m-1+k,1)).slice(0,7):todayISO().slice(0,7);setHash();return}
   const d=e.target.closest("[data-day]");if(d){VIEW="days";DAY=d.dataset.day;setHash();window.scrollTo(0,0);return}
   const tb=e.target.closest(".tab");if(tb){VIEW=tb.dataset.view;setHash()}});
