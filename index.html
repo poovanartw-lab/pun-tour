@@ -600,7 +600,7 @@ function renderDay(s){
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v21</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v22</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
   $("#printBtn").onclick=()=>{const t=document.title;document.title=printTitle();try{window.print()}catch(e){}setTimeout(()=>{document.title=t},1000)};
@@ -626,31 +626,59 @@ function renderVenues(){const t=todayISO();const rows=[...D.Shows].sort((a,b)=>a
   $("#app").innerHTML=`<h2 class="lh">งานทั้งหมด (${rows.length}) ${addBtn("Shows","+ เพิ่มงาน",{status:"Confirmed"})}</h2><div class="list">${rows.map(x=>{const ready=D.Schedule.some(r=>r.showId===x.id);const dup=D.Shows.filter(y=>y.date===x.date).length>1;
     return `<button class="lrow" type="button" data-day="${x.date}" style="${(x.endDate||x.date)<t?"opacity:.55":""}"><div><div class="big">${okDate(x.endDate)?fRange(x.date,x.endDate):fShort(x.date)}</div><div class="sub">${esc(x.type)}</div></div><div><div class="big">${esc(x.name)}</div><div class="sub">${esc([x.venue,x.city].filter(Boolean).join(" · ")||"ยังไม่ระบุสถานที่")}${dup?" · <b>2 งานวันเดียวกัน</b>":""}</div></div><span class="pill ${x.status==="Cancelled"?"off":ready?"show":"wait"}">${x.status==="Cancelled"?"ยกเลิก":ready?"มีตาราง":"รอข้อมูล"}</span></button>`}).join("")}</div>`}
 
-function copyDay(s,sh,items){const L=[`📅 ${dt(s).toLocaleDateString("th-TH",{weekday:"long",day:"numeric",month:"long"})}`];
-  sh.forEach(x=>{L.push(`🎤 ${x.name}${x.venue?" @ "+x.venue:""}${x.city?" ("+x.city+")":""}${x.setTime?" ขึ้น "+x.setTime:""}${x.setLen?" · "+x.setLen+" นาที":""}`);
-    const mp=x.map||(x.venue?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([x.venue,x.address,x.city].filter(Boolean).join(" ")):"");
-    if(mp)L.push(`📍 แผนที่: ${mp}`);
-    if(x.contact||x.contactPhone)L.push(`☎️ ${[x.contact,x.contactPhone].filter(Boolean).join(" ")}`);
-    if(x.loadIn)L.push(`🚚 จุดโหลด / ที่จอดรถ: ${x.loadIn}`);
-    if(x.room)L.push(`🚪 ห้องพัก: ${x.room}`);});
-  const ht=hotelFor(s);if(ht)L.push(`🛏 ${strip(ht.name)}`);
-  sh.forEach(x=>{const sl=setlistOf(x.id);if(sl.length){L.push("🎵 Setlist");sl.forEach(r=>L.push(r.no?`  ${r.no}. ${r.song}${r.key?" ("+r.key+")":""}${r.ver?" "+r.ver:""}`:(/^[—–-]+$/.test(r.song)?"  ———":`  — ${r.song} —`)))}});
+function copyDay(s,sh,items){const L=[];const SEP="━━━━━━━━━━━━━━";
+  const d=dt(s);const fullDate=`${d.getDate()} ${d.toLocaleDateString("th-TH",{month:"long"})} ${d.getFullYear()}`;
+  const groups=groupsForDay(s),cg=curGroup(groups);const vis=f=>matches(f)&&(!cg||forGroup(f,cg));
+  const its=items.filter(r=>vis(r.who));
+  const tag=r=>r.who&&!isCommon(r.who)?` [${r.who}]`:"";
+  const tr2=(a,b)=>a?(b?`${a} - ${b}`:a):"";
+  const urls=t=>(t||"").match(/https?:\/\/\S+/g)||[];
+  const noUrl=t=>(t||"").replace(/(แผนที่|map)\s*:?\s*https?:\/\/\S+/ig,"").replace(/https?:\/\/\S+/g,"").replace(/\s*·\s*·\s*/g," · ").replace(/^[\s·:]+|[\s·:]+$/g,"").trim();
+  const skipU=new Set(sh.map(x=>x.map).filter(Boolean));
+  const noteLines=(r,plain)=>{const o=[];const t=noUrl(r.notes);if(t)o.push(plain?t.replace(/^ติดต่อ\s*/,"เบอร์ติดต่อ "):`(${t})`);urls(r.notes).concat(urls(r.loc)).filter(u=>!skipU.has(u)).forEach(u=>o.push(u));return o};
+  const block=(title,arr)=>{if(!arr.length)return;L.push("",title,SEP);arr.forEach(x=>L.push(x));L.push(SEP)};
+  // ===== หัว =====
+  if(sh.length)sh.forEach((x,i)=>{if(i)L.push("");
+    L.push(`งาน : ${x.name}`,`🎤 ศิลปิน : PUN`,`📅 วันที่แสดง : ${fullDate}`,`📍 สถานที่ : ${[x.venue,x.city].filter(Boolean).join(" ")}`);
+    const mp=x.map||(x.venue?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([x.venue,x.address,x.city].filter(Boolean).join(" ")):"");if(mp)L.push(mp);
+    if(x.others)L.push(`🎶 ร่วมเวที : ${x.others}`);
+    if(x.contact||x.contactPhone)L.push(`☎️ ผู้ติดต่อ : ${[x.contact,x.contactPhone].filter(Boolean).join(" ")}`);
+    if(x.loadIn)L.push(`🚚 จุดโหลด / ที่จอดรถ : ${x.loadIn}`);
+    if(x.room)L.push(`🚪 ห้องพัก : ${x.room}`);});
+  else L.push(`📅 ${fullDate}`);
+  const ht=hotelFor(s);if(ht)L.push(`🛏 โรงแรมคืนนี้ : ${strip(ht.name)}${ht.map?"\n"+ht.map:""}`);
+  if(groups.length){L.push("");(cg?[cg]:groups).forEach(g=>L.push(`${g.icon} ${g.name} : ${g.members.join(", ")}`))}
+  // ===== เวที =====
+  const stage=its.filter(r=>r.cat==="Setup"||r.cat==="Soundcheck");
+  block("เวที :",stage.flatMap(r=>{const dm=durMin(r.time,r.end);const lab=r.cat==="Soundcheck"&&/sound\s*check|ซาวด์/i.test(r.item)?r.item.replace(/sound\s*check/i,"SOUND CHECK"):strip(r.item);
+    const lab2=lab.replace(/\s*\(\d+\s*นาที\)/,"");return [`${lab2} : ${tr2(r.time,r.end)}${r.cat==="Soundcheck"?" น.":""}${r.cat==="Soundcheck"&&dm?` (${dm} นาที)`:""}${tag(r)}`,...noteLines(r)]}));
+  // ===== โชว์ =====
+  const shows=its.filter(r=>r.cat==="Show");const songs=sh.flatMap(x=>setlistOf(x.id).filter(r=>r.no));
+  if(shows.length||sh.some(x=>x.setTime)){L.push("","🌻 SHOW",`📅 วันที่ : ${fullDate}`);
+    if(shows.length)shows.forEach(r=>{L.push(`⏰ เวลา : ${tr2(r.time,r.end)} ${strip(r.item)}${tag(r)}`);noteLines(r).filter(x=>!(songs.length&&songs.some(g=>x.includes(g.song)))).forEach(x=>L.push(x))});
+    else sh.filter(x=>x.setTime).forEach(x=>L.push(`⏰ เวลา : ${x.setTime}${x.setLen?" ("+x.setLen+" นาที)":""}`));
+    if(songs.length)songs.forEach(r=>L.push(` ⁃ ${r.song}${r.key?" ("+r.key+")":""}${r.ver?" "+r.ver:""}`))}
+  // ===== รถตู้ / นัดหมาย =====
+  const van=its.filter(r=>r.cat==="Van"||r.cat==="Lobby");
+  if(van.length){L.push("","🚐 นัดหมายรถตู้");let n=0;
+    van.forEach(r=>{let t=strip(r.item);let lab;
+      if(r.cat==="Lobby")lab=t;
+      else{const m=/^จุดที่\s*(\d+)\s*[·:\-]?\s*/.exec(t)||/\(?\s*จุดที่\s*(\d+)\s*\)?/.exec(t);if(m){n=+m[1];t=t.replace(m[0]," ").trim()}else n++;
+        t=t.replace(/^รถตู้\s*/,"").replace(/\s{2,}/g," ").trim();lab=`จุดที่ ${n} ${t}`}
+      L.push("",`${lab}${tag(r)}`,` ⁃ เวลา ${r.time||"--:--"} น.`);if(r.loc&&!/^https?:/.test(r.loc))L.push(r.loc);noteLines(r,true).forEach(x=>L.push(x))});
+    travelOn(s).filter(r=>r.type!=="Flight"&&vis(r.who)&&(r.driver||r.driverPhone)).forEach(r=>L.push("",`คนขับ : ${[r.driver,r.driverPhone].filter(Boolean).join(" ")}${r.no?" · "+strip(r.no):""}`))}
+  // ===== เที่ยวบิน =====
+  const fl=its.filter(r=>r.cat==="Flight"||r.cat==="Airport");const tf=travelOn(s).filter(r=>r.type==="Flight"&&vis(r.who));
+  if(fl.length||tf.length){L.push("","✈️ เที่ยวบิน");
+    if(fl.length)fl.forEach(r=>{L.push(` ⁃ ${tr2(r.time,r.end)} ${strip(r.item)}${tag(r)}`);noteLines(r).forEach(x=>L.push("   "+x))});
+    else tf.forEach(r=>L.push(` ⁃ ${r.dep}${r.arr?" - "+r.arr:""} ${r.from} → ${r.to} ${strip(r.no)}${tag(r)}`))}
+  // ===== อื่นๆ =====
+  const oth=its.filter(r=>!["Setup","Soundcheck","Show","Van","Lobby","Flight","Airport"].includes(r.cat));
+  if(oth.length){L.push("","📌 อื่นๆ");oth.forEach(r=>{L.push(` ⁃ ${tr2(r.time,r.end)||"--:--"} ${strip(r.item)}${tag(r)}${r.loc?" @ "+noUrl(r.loc):""}`);noteLines(r).forEach(x=>L.push("   "+x))})}
+  // ===== ทีมงาน =====
   if(sh.length){const cf=crewFor(sh);if(cf.list.length){L.push("",`👥 ทีมงาน (${cf.list.length} คน)`);
     const order=["Artist","Band","Crew","Management"];const g={};cf.list.forEach(c=>{const k=c.group||"Other";(g[k]=g[k]||[]).push(c)});
-    Object.keys(g).sort((a,b)=>(order.indexOf(a)+1||9)-(order.indexOf(b)+1||9)).forEach(k=>{L.push(`【${GROUP_TH[k]||k}】`);g[k].forEach(c=>L.push(`• ${c.short||c.name}${c.role?" – "+c.role.replace(/\s*\(เช็ก\)\s*/g," ").trim():""}`))})}}
-  const groups=groupsForDay(s),cg=curGroup(groups);const vis=f=>matches(f)&&(!cg||forGroup(f,cg));
-  const trLine=r=>`${r.type==="Flight"?"✈️":"🚐"} ${TT[r.type]||r.type} ${r.from}→${r.to} ${r.dep}${r.arr?"-"+r.arr:""} ${strip(r.no)}${r.driver?" คนขับ "+r.driver+" "+r.driverPhone:""}${r.pickup?" · จุดรับ "+r.pickup:""}`.trim();
-  const itLine=r=>{L.push(`${r.time||"--:--"}${r.end?"–"+r.end:""}  ${strip(r.item)}${r.who&&r.who!=="ทุกคน"?" ["+r.who+"]":""}${r.loc?" @ "+r.loc:""}`);if(r.notes)L.push(`      ↳ ${r.notes}`)};
-  const tr=travelOn(s);
-  if(groups.length&&!cg&&!me()){
-    groups.forEach(g=>{const legs=tr.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));const its=items.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));
-      if(!legs.length&&!its.length)return;L.push("",`${g.icon} ${g.name} (${g.members.join(", ")})`);legs.forEach(r=>L.push(trLine(r)));its.forEach(itLine)});
-    const ct=tr.filter(isC=>isCommon(isC.who)),ci=items.filter(r=>isCommon(r.who));
-    if(ct.length||ci.length){L.push("","🕘 ทุกคน");ct.forEach(r=>L.push(trLine(r)));ci.forEach(itLine)}
-  }else{
-    if(cg)L.push("",`${cg.icon} เฉพาะ${cg.name} (${cg.members.join(", ")})`);
-    tr.filter(r=>vis(r.who)).forEach(r=>L.push(trLine(r)));
-    L.push("","🕘 ตารางเวลา");items.filter(r=>vis(r.who)).forEach(itLine)}
+    Object.keys(g).sort((a,b)=>(order.indexOf(a)+1||9)-(order.indexOf(b)+1||9)).forEach(k=>{L.push(`【${GROUP_TH[k]||k}】`);g[k].forEach(c=>L.push(` ⁃ ${c.short||c.name}${c.role?" – "+c.role.replace(/\s*\(เช็ก\)\s*/g," ").trim():""}`))})}}
   L.push("","ตารางเต็ม: "+location.href.split("#")[0]+"#d-"+s);const text=L.join("\n");
   const ok=()=>toast("คัดลอกแล้ว วางในกลุ่ม LINE ได้เลย");
   if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text).then(ok,()=>box(text));else box(text);
