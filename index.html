@@ -562,7 +562,7 @@ function renderDay(s){
   L+=`<div class="box travel"><div class="boxhead"><h3>Travel</h3>${addBtn("Travel","+ เพิ่ม",{date:s,showId})}</div>`;
   const legHtml=r=>`<div class="leg"><div class="boxhead"><span><b>${esc(strip(r.no)||TT[r.type]||r.type)}</b> <span class="sub">${esc(TT[r.type]||r.type)}</span></span>${edBtn("Travel",r)}</div><span class="mono">${esc(r.from)} ${esc(r.dep)} → ${esc(r.to)} ${esc(r.arr)}</span>${durMin(r.dep,r.arr)?` <span class="sub">(${dur(durMin(r.dep,r.arr))})</span>`:""} · ${esc(r.who||"ทุกคน")}${r.driver?`<br><span class="sub">คนขับ ${esc(r.driver)} ${esc(r.driverPhone)}</span>`:""}${r.pickup?`<br><span class="sub">จุดรับ: ${esc(r.pickup)}</span>`:""}</div>`;
   if(tr.length){L+=`<div class="big">${tr.length} เที่ยว${cg?" · "+cg.icon+" "+esc(cg.name):""}</div>`;
-    if(groups.length&&!cg){const used=new Set();groups.forEach(g=>{const legs=tr.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));legs.forEach(r=>used.add(r));if(legs.length)L+=`<div class="tgh">${g.icon} ${esc(g.name)} <span class="sub">· ${esc(g.members.join(", "))}</span></div>`+legs.map(legHtml).join("")});
+    if(groups.length&&!cg){const used=new Set();const prim=r=>{const w=(r.who||"").split(",").map(x=>x.trim().toLowerCase());return groups.find(g=>w.includes(g.name.toLowerCase()))||groups.find(g=>forGroup(r.who,g))};groups.forEach(g=>{const legs=tr.filter(r=>!isCommon(r.who)&&prim(r)===g);legs.forEach(r=>used.add(r));if(legs.length)L+=`<div class="tgh">${g.icon} ${esc(g.name)} <span class="sub">· ${esc(g.members.join(", "))}</span></div>`+legs.map(legHtml).join("")});
       const rest=tr.filter(r=>!used.has(r));if(rest.length)L+=`<div class="tgh">👥 ทุกคน</div>`+rest.map(legHtml).join("")}
     else L+=tr.map(legHtml).join("")}
   else L+=`<div class="sub">${cg?"ทีมนี้ไม่มีการเดินทางวันนี้":"ไม่มีการเดินทางวันนี้"}</div>`;
@@ -600,7 +600,7 @@ function renderDay(s){
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v22</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v23</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
   $("#printBtn").onclick=()=>{const t=document.title;document.title=printTitle();try{window.print()}catch(e){}setTimeout(()=>{document.title=t},1000)};
