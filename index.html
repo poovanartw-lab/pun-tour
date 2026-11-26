@@ -163,7 +163,7 @@ button.rrow{cursor:pointer;border-color:var(--line)}
 .rrow.me{background:var(--ink);color:#fff}.rrow.me .rr{color:#ddd}
 .rn{font-weight:600}.rr{color:var(--muted);font-size:13px}
 @media(min-width:760px){.roster.wide{grid-template-columns:repeat(2,1fr)}}
-.gear{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
+.gear{grid-column:1/-1;margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
 .ghead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
 .ghead b{font-family:var(--font-display);font-size:17px}
 .gseg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--grey);border-radius:999px;padding:4px}
@@ -187,7 +187,11 @@ button.rrow{cursor:pointer;border-color:var(--line)}
 .gadd{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 10px}.gadd .ed{white-space:nowrap}
 .gq{font-size:12px;color:var(--muted);white-space:nowrap}
 .gi .ed{margin-top:8px}
-@media print{.gear{display:none}}
+.gprint{display:none}
+@media print{.install,.toast{display:none!important}.gear{box-shadow:none;break-before:page;border:0;padding:0}.gear .ghead .sub{display:none}.gseg,.gbar,.gcat,.gadd,.gear .ed{display:none!important}.gprint{display:block}
+.gprint table{width:100%;border-collapse:collapse;font-size:11px}.gprint th,.gprint td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}
+.gprint th{background:#eee}.gprint tr.pc td{background:#222;color:#fff;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.gprint small{color:#555}.gprint tr{break-inside:avoid}.gprint td:nth-child(n+2){white-space:nowrap;width:1%}}
 h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 12px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
@@ -450,6 +454,7 @@ function gearBox(shows){
       h+=`<div class="gcat${n===items.length?" full":""}"><button type="button" class="gch" data-gcat="${esc(key)}" aria-expanded="${open}"><span>${esc(c)}</span><span class="gn">${n}/${items.length}${n===items.length?" ✓":""}</span><span class="car">${open?"▴":"▾"}</span></button>`;
       if(open)h+=items.map(g=>{const t=cur.get(g.id);return `<div class="gi${t?" on":""}"><button type="button" class="gtk" data-tick="${esc(x.id)}|${esc(g.id)}" aria-pressed="${!!t}"><span class="gbox">${t?"✓":""}</span><span class="gt"><b>${esc(g.item)}${g.showId?` <span class="gx">เฉพาะงานนี้</span>`:""}</b>${g.detail?`<small>${esc(g.detail)}</small>`:""}${t?`<em>✓ ${esc(t.by||"")} ${esc((t.time||"").slice(11))}</em>`:""}</span><span class="gq">${esc(g.qty)}</span></button>${edBtn("Gear",g,"✎")}</div>`}).join("");
       h+=`</div>`});
+    h+=`<div class="gprint"><table><thead><tr><th>ของ</th><th>จำนวน</th><th>ขาไป</th><th>ขากลับ</th></tr></thead><tbody>${cats.map(c=>`<tr class="pc"><td colspan="4">${esc(c)}</td></tr>`+list.filter(g=>(g.cat||"Other")===c).map(g=>{const o=out.get(g.id),b=back.get(g.id);return `<tr><td><b>${esc(g.item)}</b>${g.showId?" (เฉพาะงานนี้)":""}${g.detail?`<br><small>${esc(g.detail)}</small>`:""}</td><td>${esc(g.qty)}</td><td>${o?"☑ "+esc(o.by||""):"☐"}</td><td>${b?"☑ "+esc(b.by||""):"☐"}</td></tr>`}).join("")).join("")}</tbody></table></div>`;
     return h+`</section>`}).join("")}
 async function tickGear(sid,gid){
   const ph=GPHASE;const i=D.GearCheck.findIndex(r=>r.showId===sid&&r.gearId===gid&&r.phase===ph);const checked=i<0;
