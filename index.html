@@ -542,10 +542,10 @@ function renderDay(s){
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v16</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v17</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
-  $("#printBtn").onclick=()=>{try{window.print()}catch(e){}};
+  $("#printBtn").onclick=()=>{const t=document.title;document.title=printTitle();try{window.print()}catch(e){}setTimeout(()=>{document.title=t},1000)};
 }
 
 function renderCal(){const [y,m]=CALM.split("-").map(Number);const first=new Date(y,m-1,1);const n=new Date(y,m,0).getDate();const t=todayISO();
@@ -882,6 +882,13 @@ function maybeInstallBanner(){
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;maybeInstallBanner()});
 $("#installBtn").onclick=async()=>{if(!deferred)return;deferred.prompt();await deferred.userChoice;deferred=null;$("#install").classList.remove("show")};
 $("#installX").onclick=()=>{store.set("pun-install-x","1");$("#install").classList.remove("show")};
+/* ชื่อไฟล์ PDF = ชื่องาน */
+let BASE_TITLE=document.title;
+function printTitle(){if(VIEW!=="days"||!DAY)return BASE_TITLE;const sh=showsOn(DAY);
+  const name=sh.length?sh.map(x=>x.name+(x.venue?" ("+x.venue+")":"")).join(" + "):"Day sheet";
+  return `PUN ${DAY} ${name}`.replace(/[\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim()}
+window.addEventListener("beforeprint",()=>{BASE_TITLE=document.title.startsWith("PUN 20")?BASE_TITLE:document.title;document.title=printTitle()});
+window.addEventListener("afterprint",()=>{document.title=BASE_TITLE});
 if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{})}
 
 /* ===== render + events ===== */
