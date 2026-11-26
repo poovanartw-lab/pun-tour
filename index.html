@@ -556,7 +556,7 @@ function renderDay(s){
     ${x.notes?`<div class="sub" style="margin-top:4px">${linkify(x.notes)}</div>`:""}
     ${x.venue?mapEmbed(gq(x.venue,x.address,x.city)):""}
     <div class="maprow">${mapLink(x.venue||x.name,x.map,[x.address,x.city].join(" "))}${(()=>{const o=originFor(s,x);return o?`<a href="https://www.google.com/maps/dir/?api=1&origin=${gq(o,x.city)}&destination=${gq(x.venue||x.name,x.city)}" target="_blank" rel="noopener">🧭 เส้นทาง ${esc(o)} → ${esc(x.venue||x.name)}</a>`:`<a href="https://www.google.com/maps/dir/?api=1&destination=${gq(x.venue||x.name,x.city)}" target="_blank" rel="noopener">🧭 นำทางไปหน้างาน</a>`})()}</div></div>`});
-  if(groups.length)L+=`<div class="box tgbox"><h3>ทีมเดินทาง</h3>${groups.map(g=>`<div class="tgcard${cg&&cg.name===g.name?" on":""}"><div class="tgt">${g.icon} ${esc(g.name)} <span>${g.members.length} คน</span></div><div class="tgm">${g.members.map(n=>{const p=person(n);return `<span class="${me()&&(p?.name===me()||n===me())?"me":""}">${esc(p?.short||n)}${p?.role?`<small>${esc(p.role.replace(/\s*\(เช็ก\)\s*/g," ").trim())}</small>`:""}</span>`}).join("")}</div></div>`).join("")}</div>`;
+  if(groups.length||(editing()&&sh.length))L+=`<div class="box tgbox"><div class="boxhead"><h3>ทีมเดินทาง</h3>${sh.length?`<button class="ed" type="button" data-teamedit="${idx("Shows",sh[0])}">${groups.length?"✎ แก้ทีม":"+ ตั้งทีมเดินทาง"}</button>`:""}</div>${groups.length?"":`<div class="sub">ยังไม่ได้แบ่งทีม (ทุกคนเดินทางด้วยกัน)</div>`}${groups.map(g=>`<div class="tgcard${cg&&cg.name===g.name?" on":""}"><div class="tgt">${g.icon} ${esc(g.name)} <span>${g.members.length} คน</span></div><div class="tgm">${g.members.map(n=>{const p=person(n);return `<span class="${me()&&(p?.name===me()||n===me())?"me":""}">${esc(p?.short||n)}${p?.role?`<small>${esc(p.role.replace(/\s*\(เช็ก\)\s*/g," ").trim())}</small>`:""}</span>`}).join("")}</div></div>`).join("")}</div>`;
   sh.forEach(x=>{const sl=setlistOf(x.id);if(!sl.length&&!editing())return;const songs=sl.filter(r=>r.no).length;
     L+=`<div class="box setlist"><div class="boxhead"><h3>Setlist${sh.length>1?" · "+esc(x.name):""} · ${songs} เพลง</h3>${addBtn("Setlist","+ เพิ่ม",{showId:x.id,seq:nextSeq(x.id)})}</div>${sl.map(r=>r.no?`<div class="sl"><span class="sl-n">${esc(r.no)}</span><span class="sl-s">${esc(r.song)}${r.ver?` <small>${esc(r.ver)}</small>`:""}${r.notes?` <small>· ${esc(r.notes)}</small>`:""}</span>${r.key?`<span class="sl-k">${esc(r.key)}</span>`:""}${edBtn("Setlist",r,"✎")}</div>`:`<div class="sl seg"><span>${/^[—–-]+$/.test(r.song)?"":esc(r.song)}</span>${edBtn("Setlist",r,"✎")}</div>`).join("")||'<div class="sub">ยังไม่มีลิสต์เพลง</div>'}</div>`});
   L+=`<div class="box travel"><div class="boxhead"><h3>Travel</h3>${addBtn("Travel","+ เพิ่ม",{date:s,showId})}</div>`;
@@ -600,7 +600,7 @@ function renderDay(s){
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v20</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v21</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
   $("#printBtn").onclick=()=>{const t=document.title;document.title=printTitle();try{window.print()}catch(e){}setTimeout(()=>{document.title=t},1000)};
@@ -716,6 +716,15 @@ function validate(tab,v){
   if(tab==="Hotels"){if(!v.name)throw new Error("ใส่ชื่อโรงแรมก่อน");if(!okDate(v.checkin)||!okDate(v.checkout))throw new Error("ใส่วันเช็กอินและเช็กเอาต์")}
   if(tab==="Schedule"&&!v.who)v.who="ทุกคน";
   if(tab==="Crew"){if(!v.name)throw new Error("ใส่ชื่อก่อน");if(!v.short)v.short=v.name}
+}
+function editTeams(o){
+  const gs=parseGroups(o.tgroups);const names=[gs[0]?.name||"ทีมรถตู้",gs[1]?.name||"ทีมบิน",gs[2]?.name||""];
+  const fields=[],values={showId:o.id};
+  [0,1,2].forEach(i=>{fields.push([`gn${i}`,i<2?`ชื่อทีม ${i+1}`:"ชื่อทีม 3 (ถ้ามี)","text"],[`gm${i}`,"สมาชิก (กดชื่อเพื่อเลือก / พิมพ์ชื่อคนนอกเพิ่มได้)","crew"]);values[`gn${i}`]=names[i];values[`gm${i}`]=(gs[i]?.members||[]).join(", ")});
+  openForm({title:"ทีมเดินทาง · "+o.name,fields,values,onSave:async v=>{
+    const parts=[0,1,2].map(i=>{const n=(v[`gn${i}`]||"").replace(/[:|]/g," ").trim();const m=(v[`gm${i}`]||"").split(",").map(x=>x.trim()).filter(Boolean);return n&&m.length?`${n}: ${m.join(", ")}`:""}).filter(Boolean);
+    const full={};KEYS.Shows.forEach(k=>full[k]=o[k]);full.tgroups=parts.join(" | ");validate("Shows",full);
+    applyServer(await post({pin:store.get("pun-pin"),action:"update",tab:"Shows",row:o._row,old:o._old,values:KEYS.Shows.map(k=>full[k])}));GSEL=null}});
 }
 function editRecord(tab,o,only){
   const fl=only?FIELDS[tab].filter(f=>only.includes(f[0])):FIELDS[tab];
@@ -972,6 +981,7 @@ function render(){
   $("#n-days").textContent=days.length;$("#n-flights").textContent=D.Travel.length;$("#n-hotels").textContent=D.Hotels.length;$("#n-venues").textContent=D.Shows.length;
 }
 document.addEventListener("click",e=>{
+  const te=e.target.closest("[data-teamedit]");if(te){e.stopPropagation();editTeams(D.Shows[+te.dataset.teamedit]);return}
   const cp=e.target.closest("[data-crewpick]");if(cp){e.stopPropagation();editRecord("Shows",D.Shows[+cp.dataset.crewpick],["crew"]);return}
   const ed=e.target.closest("[data-edit]");if(ed){e.stopPropagation();editRecord(ed.dataset.edit,D[ed.dataset.edit][+ed.dataset.i]);return}
   const ad=e.target.closest("[data-add]");if(ad){e.stopPropagation();addRecord(ad.dataset.add,JSON.parse(ad.dataset.preset||"{}"));return}
