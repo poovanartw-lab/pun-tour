@@ -193,6 +193,13 @@ button.rrow{cursor:pointer;border-color:var(--line)}
 .gprint table{width:100%;border-collapse:collapse;font-size:11px}.gprint th,.gprint td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}
 .gprint th{background:#eee}.gprint tr.pc td{background:#222;color:#fff;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .gprint small{color:#555}.gprint tr{break-inside:avoid}.gprint td:nth-child(n+2){white-space:nowrap;width:1%}}
+.tgbar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.tgbar button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.tgbar button span{font-weight:500;color:var(--muted);margin-left:2px}
+.tgbar button[aria-selected="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}.tgbar button[aria-selected="true"] span{color:#ccc}
+.tgmem{font-size:12.5px;color:var(--muted);margin:-2px 0 10px}
+.tgh{font-size:12px;font-weight:700;margin:10px 0 2px;color:var(--ink)}
+@media print{.tgbar{display:none}}
 h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 12px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
@@ -328,7 +335,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}, del(k){try{localStorage.removeItem(k)}catch(e){}} };
 
 const KEYS = {
-  Shows:["id","date","endDate","name","type","venue","city","address","map","setTime","setLen","others","contact","contactPhone","hotelId","status","notes","crew","loadIn","room"],
+  Shows:["id","date","endDate","name","type","venue","city","address","map","setTime","setLen","others","contact","contactPhone","hotelId","status","notes","crew","loadIn","room","tgroups"],
   Schedule:["showId","date","time","end","item","cat","who","loc","notes"],
   Travel:["id","showId","date","type","no","from","to","dep","arr","who","driver","driverPhone","pickup","ref","notes"],
   Hotels:["id","showId","name","address","phone","checkin","checkout","map","rooms","notes"],
@@ -343,7 +350,7 @@ const FIELDS = {
   Schedule:[["showId","งาน","show"],["date","วันที่","date"],["time","เวลา","time"],["end","ถึงเวลา","time"],["item","รายการ","text",1],["cat","ประเภท","sel:"+CATS.join(",")],["loc","สถานที่","text"],["who","ใครเกี่ยวข้อง","who",1],["notes","หมายเหตุ","text",1]],
   Travel:[["id","รหัส","auto:T"],["showId","งาน","show"],["date","วันที่","date"],["type","ประเภท","sel:Flight,Van,Car,Bus,Train,Boat"],["no","เลขไฟลต์ / ทะเบียนรถ","text",1],["from","จาก","text"],["to","ไป","text"],["dep","ออก","time"],["arr","ถึง","time"],["who","ใครไปเที่ยวนี้","who",1],["driver","คนขับ","text"],["driverPhone","เบอร์คนขับ","tel"],["pickup","จุดรับ","text",1],["ref","Booking ref","text"],["notes","หมายเหตุ","text"]],
   Hotels:[["id","รหัส","auto:H"],["showId","งาน","show"],["name","ชื่อโรงแรม","text",1],["address","ที่อยู่","text",1],["phone","เบอร์โรงแรม","tel"],["map","ลิงก์แผนที่","url"],["checkin","เช็กอิน","date"],["checkout","เช็กเอาต์","date"],["rooms","ห้อง / ใครพัก","text",1],["notes","หมายเหตุ","text",1]],
-  Shows:[["id","รหัส","auto:S"],["status","สถานะ","sel:Confirmed,TBC,Cancelled"],["date","วันที่","date"],["endDate","ถึงวันที่ (ถ้าหลายวัน)","date"],["name","ชื่องาน","text",1],["type","ประเภท","sel:Show,Festival,Pub,Event,Private"],["venue","Venue","text"],["city","เมือง","text"],["address","ที่อยู่","text",1],["map","ลิงก์แผนที่","url",1],["setTime","เวลาขึ้นโชว์","time"],["setLen","ความยาว (นาที)","number"],["others","ศิลปินร่วมเวที","text",1],["contact","ผู้ติดต่อหน้างาน","text"],["contactPhone","เบอร์ผู้ติดต่อ","tel"],["hotelId","Hotel ID","text"],["loadIn","จุดโหลด / ที่จอดรถ","text",1],["room","ห้องพัก / Green room (ที่หน้างาน)","text",1],["notes","หมายเหตุ","text",1],["crew","ทีมที่ไปงานนี้ (ไม่เลือก = ทุกคน)","crew",1]]
+  Shows:[["id","รหัส","auto:S"],["status","สถานะ","sel:Confirmed,TBC,Cancelled"],["date","วันที่","date"],["endDate","ถึงวันที่ (ถ้าหลายวัน)","date"],["name","ชื่องาน","text",1],["type","ประเภท","sel:Show,Festival,Pub,Event,Private"],["venue","Venue","text"],["city","เมือง","text"],["address","ที่อยู่","text",1],["map","ลิงก์แผนที่","url",1],["setTime","เวลาขึ้นโชว์","time"],["setLen","ความยาว (นาที)","number"],["others","ศิลปินร่วมเวที","text",1],["contact","ผู้ติดต่อหน้างาน","text"],["contactPhone","เบอร์ผู้ติดต่อ","tel"],["hotelId","Hotel ID","text"],["loadIn","จุดโหลด / ที่จอดรถ","text",1],["room","ห้องพัก / Green room (ที่หน้างาน)","text",1],["tgroups","ทีมเดินทาง (เช่น ทีมรถตู้: ภู, ปอนด์ | ทีมบิน: ปัน, ติม) · เว้นว่าง = ไปด้วยกันทั้งหมด","text",1],["notes","หมายเหตุ","text",1],["crew","ทีมที่ไปงานนี้ (ไม่เลือก = ทุกคน)","crew",1]]
 };
 FIELDS.Setlist=[["showId","งาน","show"],["seq","ลำดับในลิสต์","number"],["no","เลขเพลง (ว่าง = ช่วงพูด/คั่น)","text"],["song","ชื่อเพลง / ช่วง","text",1],["key","คีย์","text"],["ver","เวอร์ชัน","text"],["notes","หมายเหตุ","text",1]];
 FIELDS.Crew=[["name","ชื่อ (ชื่อจริงหรือชื่อเล่น)","text",1],["short","ชื่อที่โชว์ในเว็บ","text"],["group","กลุ่ม","sel:Band,Crew,Management,Artist"],["role","ตำแหน่ง","text",1],["notes","หมายเหตุ","text",1]];
@@ -404,7 +411,24 @@ function matches(field){const sel=me();if(!sel)return true;
   const w=(field||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean);
   if(!w.length||w.includes("ทุกคน")||w.includes("everyone"))return true;
   const p=person(sel);const keys=[sel,p?.short,p?.group,p?.role].filter(Boolean).map(s=>s.toLowerCase());
-  return w.some(x=>keys.includes(x))}
+  if(w.some(x=>keys.includes(x)))return true;
+  const gs=parseGroups(D.Shows.map(x=>x.tgroups).filter(Boolean).join("|"));return gs.some(g=>w.includes(g.name.toLowerCase())&&memberKeys(g).has(sel.toLowerCase()))}
+/* ===== travel groups ===== */
+let GSEL=null; // null = auto (ตามคนที่เลือก), "" = ทั้งหมด, หรือชื่อทีม
+function parseGroups(str){return (str||"").split(/\||\n/).map(x=>x.trim()).filter(Boolean).map(x=>{const i=x.indexOf(":");if(i<0)return null;
+  const name=x.slice(0,i).replace(/^[^\p{L}\p{N}]+/u,"").trim();const members=x.slice(i+1).split(",").map(m=>m.trim()).filter(Boolean);
+  return name?{name,members,icon:/บิน|flight|fly/i.test(name)?"✈️":/รถ|van|car/i.test(name)?"🚐":"👥"}:null}).filter(Boolean)}
+function groupsForDay(s){const ids=new Set(showsOn(s).map(x=>x.id));D.Schedule.forEach(r=>r.date===s&&r.showId&&ids.add(r.showId));D.Travel.forEach(r=>r.date===s&&r.showId&&ids.add(r.showId));
+  const out=[];const seen=new Set();D.Shows.filter(x=>ids.has(x.id)).forEach(x=>parseGroups(x.tgroups).forEach(g=>{if(!seen.has(g.name)){seen.add(g.name);out.push(g)}}));return out}
+const memberKeys=g=>new Set(g.members.flatMap(m=>{const p=person(m);return [m,p?.name,p?.short].filter(Boolean)}).map(x=>x.toLowerCase()));
+function groupOf(name,groups){if(!name)return null;const p=person(name);const k=[name,p?.short,p?.name].filter(Boolean).map(x=>x.toLowerCase());return groups.find(g=>k.some(x=>memberKeys(g).has(x)))||null}
+function curGroup(groups){if(!groups.length)return null;if(GSEL===null){return groupOf(me(),groups)}return groups.find(g=>g.name===GSEL)||null}
+/* แถวนี้เป็นของทีม g ไหม (ทุกคน/ว่าง = ของทุกทีม) */
+function forGroup(field,g){const w=(field||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
+  if(!w.length||w.includes("ทุกคน")||w.includes("everyone"))return true;
+  if(w.includes(g.name.toLowerCase()))return true;const mk=memberKeys(g);if(w.some(x=>mk.has(x)))return true;
+  const ms=g.members.map(person).filter(Boolean);return w.some(x=>ms.some(p=>[p.group,p.role].filter(Boolean).map(y=>y.toLowerCase()).includes(x)))}
+const isCommon=field=>{const w=(field||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);return !w.length||w.includes("ทุกคน")||w.includes("everyone")};
 function isMeTok(x){const sel=me();if(!sel||x==="ทุกคน")return false;const p=person(sel);return [sel,p?.short,p?.group].filter(Boolean).map(s=>s.toLowerCase()).includes(x.toLowerCase())}
 function allDays(){const set=new Set();
   D.Shows.forEach(s=>{if(!okDate(s.date))return;set.add(s.date);if(okDate(s.endDate)){const d=dt(s.date),e=dt(s.endDate);while(d<e){d.setDate(d.getDate()+1);set.add(iso(d))}}});
@@ -499,7 +523,8 @@ function renderSide(){const days=allDays();const t=todayISO();
   const cur=$("#side [aria-current='true']");if(cur){const sd=$("#side");const a=cur.offsetLeft-sd.offsetLeft,b=cur.offsetTop-sd.offsetTop;if(a<sd.scrollLeft||a+cur.offsetWidth>sd.scrollLeft+sd.clientWidth)sd.scrollLeft=a-12;if(b<sd.scrollTop||b+cur.offsetHeight>sd.scrollTop+sd.clientHeight)sd.scrollTop=b-12}}
 
 function renderDay(s){
-  const sh=showsOn(s),tr=travelOn(s).filter(r=>matches(r.who)),[,kl]=dayKind(s);
+  const groups=groupsForDay(s),cg=curGroup(groups);const vis=f=>matches(f)&&(!cg||forGroup(f,cg));
+  const sh=showsOn(s),tr=travelOn(s).filter(r=>vis(r.who)),[,kl]=dayKind(s);
   const route=tr.length?`${tr[0].from} → ${tr[tr.length-1].to}`:"";
   const title=sh.length?sh.map(x=>x.venue||x.name).join(" / "):route||"วันว่าง";
   const showId=sh[0]?.id||"";
@@ -513,8 +538,12 @@ function renderDay(s){
   sh.forEach(x=>{const sl=setlistOf(x.id);if(!sl.length&&!editing())return;const songs=sl.filter(r=>r.no).length;
     L+=`<div class="box setlist"><div class="boxhead"><h3>Setlist${sh.length>1?" · "+esc(x.name):""} · ${songs} เพลง</h3>${addBtn("Setlist","+ เพิ่ม",{showId:x.id,seq:nextSeq(x.id)})}</div>${sl.map(r=>r.no?`<div class="sl"><span class="sl-n">${esc(r.no)}</span><span class="sl-s">${esc(r.song)}${r.ver?` <small>${esc(r.ver)}</small>`:""}${r.notes?` <small>· ${esc(r.notes)}</small>`:""}</span>${r.key?`<span class="sl-k">${esc(r.key)}</span>`:""}${edBtn("Setlist",r,"✎")}</div>`:`<div class="sl seg"><span>${/^[—–-]+$/.test(r.song)?"":esc(r.song)}</span>${edBtn("Setlist",r,"✎")}</div>`).join("")||'<div class="sub">ยังไม่มีลิสต์เพลง</div>'}</div>`});
   L+=`<div class="box travel"><div class="boxhead"><h3>Travel</h3>${addBtn("Travel","+ เพิ่ม",{date:s,showId})}</div>`;
-  if(tr.length){L+=`<div class="big">${tr.length} เที่ยว · ${esc(route)}</div>`+tr.map(r=>`<div class="leg"><div class="boxhead"><span><b>${esc(strip(r.no)||TT[r.type]||r.type)}</b> <span class="sub">${esc(TT[r.type]||r.type)}</span></span>${edBtn("Travel",r)}</div><span class="mono">${esc(r.from)} ${esc(r.dep)} → ${esc(r.to)} ${esc(r.arr)}</span> · ${esc(r.who||"ทุกคน")}${r.driver?`<br><span class="sub">คนขับ ${esc(r.driver)} ${esc(r.driverPhone)}</span>`:""}${r.pickup?`<br><span class="sub">จุดรับ: ${esc(r.pickup)}</span>`:""}</div>`).join("")}
-  else L+=`<div class="sub">ไม่มีการเดินทางวันนี้</div>`;
+  const legHtml=r=>`<div class="leg"><div class="boxhead"><span><b>${esc(strip(r.no)||TT[r.type]||r.type)}</b> <span class="sub">${esc(TT[r.type]||r.type)}</span></span>${edBtn("Travel",r)}</div><span class="mono">${esc(r.from)} ${esc(r.dep)} → ${esc(r.to)} ${esc(r.arr)}</span> · ${esc(r.who||"ทุกคน")}${r.driver?`<br><span class="sub">คนขับ ${esc(r.driver)} ${esc(r.driverPhone)}</span>`:""}${r.pickup?`<br><span class="sub">จุดรับ: ${esc(r.pickup)}</span>`:""}</div>`;
+  if(tr.length){L+=`<div class="big">${tr.length} เที่ยว${cg?" · "+cg.icon+" "+esc(cg.name):""}</div>`;
+    if(groups.length&&!cg){const used=new Set();groups.forEach(g=>{const legs=tr.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));legs.forEach(r=>used.add(r));if(legs.length)L+=`<div class="tgh">${g.icon} ${esc(g.name)}</div>`+legs.map(legHtml).join("")});
+      const rest=tr.filter(r=>!used.has(r));if(rest.length)L+=`<div class="tgh">👥 ทุกคน</div>`+rest.map(legHtml).join("")}
+    else L+=tr.map(legHtml).join("")}
+  else L+=`<div class="sub">${cg?"ทีมนี้ไม่มีการเดินทางวันนี้":"ไม่มีการเดินทางวันนี้"}</div>`;
   L+=`</div>`;
   const ht=hotelFor(s);
   L+=`<div class="box hotel"><div class="boxhead"><h3>Hotel tonight</h3>${ht?edBtn("Hotels",ht):addBtn("Hotels","+ เพิ่ม",{checkin:s,showId})}</div>${ht?`<div class="big">${esc(strip(ht.name))}</div><div class="sub">${esc(ht.address)}</div>${ht.phone?`<div class="sub">โทร: ${esc(ht.phone)}</div>`:""}${ht.rooms?`<div class="sub">${esc(ht.rooms)}</div>`:""}<div class="sub">${mapLink(ht.name,ht.map,ht.address)}</div>`:`<div class="sub">${sh.length?'<span class="waiting">รอข้อมูล</span> หรือไม่ได้ค้างคืน':"ไม่มี"}</div>`}</div>`;
@@ -525,15 +554,16 @@ function renderDay(s){
   L+=`</div>`;
 
   const items=D.Schedule.filter(r=>r.date===s).sort((a,b)=>(mins(a.time)??9999)-(mins(b.time)??9999));
-  const mine=items.filter(r=>matches(r.who));
-  L+=`<section class="sched"><div class="hd"><b>ตาราง${kl==="Off"?"":" "+kl+" day"}</b><span>${mine.length} รายการ${me()?" ของ "+esc(person(me())?.short||me()):""} ${addBtn("Schedule","+ เพิ่มคิว",{date:s,showId})}</span></div>`;
+  const mine=items.filter(r=>vis(r.who));
+  L+=`<section class="sched"><div class="hd"><b>ตาราง${kl==="Off"?"":" "+kl+" day"}</b><span>${mine.length} รายการ${me()?" ของ "+esc(person(me())?.short||me()):cg?" ของ "+esc(cg.name):""} ${addBtn("Schedule","+ เพิ่มคิว",{date:s,showId})}</span></div>`;
+  if(groups.length)L+=`<div class="tgbar" role="tablist"><button type="button" data-tg="" aria-selected="${!cg}">ทั้งหมด</button>${groups.map(g=>`<button type="button" data-tg="${esc(g.name)}" aria-selected="${cg?.name===g.name}">${g.icon} ${esc(g.name)} <span>${g.members.length}</span></button>`).join("")}</div>${cg?`<div class="tgmem">${cg.icon} ${esc(cg.name)}: ${esc(cg.members.join(", "))}</div>`:""}`;
   if(!items.length)L+=`<div class="empty">ยังไม่มีตารางเวลาของวันนี้<br>${LIVE?"กด ✎ แก้ไข แล้ว + เพิ่มคิว":"เพิ่มได้ในแท็บ Schedule ของ Google Sheet"}</div>`;
   else{
     if(items.some(r=>/^\(ตัวอย่าง\)/.test(r.item)))L+=`<div class="notice">ตารางวันนี้เป็นตัวอย่าง (เวลาสมมติ) รอแก้เป็นเวลาจริง</div>`;
     let period="",prev=null;
     items.forEach(r=>{const m=mins(r.time);const p=m==null?"ไม่ระบุเวลา":m<720?"เช้า":m<1020?"บ่าย":"เย็น / ค่ำ";
       if(p!==period){period=p;L+=`<div class="period">${p}</div>`}
-      const ok=matches(r.who);
+      const ok=vis(r.who);
       if(prev&&ok&&m!=null){const g=m-prev.m;if(g>=60)L+=`<div class="gap">อีก ${dur(g)} ถึง ${esc(strip(r.item))}</div>`}
       const ppl=(r.who||"").split(",").map(x=>x.trim()).filter(Boolean);
       L+=`<div class="mo c-${esc(CATS.includes(r.cat)?r.cat:"Other")}${ok?"":" dim"}"><div class="tm">${esc(r.time||"–")}${r.end?`<small>ถึง ${esc(r.end)}</small>`:""}</div>
@@ -542,7 +572,7 @@ function renderDay(s){
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v18</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v19</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
   $("#printBtn").onclick=()=>{const t=document.title;document.title=printTitle();try{window.print()}catch(e){}setTimeout(()=>{document.title=t},1000)};
@@ -580,8 +610,19 @@ function copyDay(s,sh,items){const L=[`📅 ${dt(s).toLocaleDateString("th-TH",{
   if(sh.length){const cf=crewFor(sh);if(cf.list.length){L.push("",`👥 ทีมงาน (${cf.list.length} คน)`);
     const order=["Artist","Band","Crew","Management"];const g={};cf.list.forEach(c=>{const k=c.group||"Other";(g[k]=g[k]||[]).push(c)});
     Object.keys(g).sort((a,b)=>(order.indexOf(a)+1||9)-(order.indexOf(b)+1||9)).forEach(k=>{L.push(`【${GROUP_TH[k]||k}】`);g[k].forEach(c=>L.push(`• ${c.short||c.name}${c.role?" – "+c.role.replace(/\s*\(เช็ก\)\s*/g," ").trim():""}`))})}}
-  travelOn(s).filter(r=>matches(r.who)).forEach(r=>L.push(`🚐 ${TT[r.type]||r.type} ${r.from}→${r.to} ${r.dep}${r.arr?"-"+r.arr:""} ${strip(r.no)}${r.driver?" คนขับ "+r.driver+" "+r.driverPhone:""}`.trim()));
-  L.push("","🕘 ตารางเวลา");items.filter(r=>matches(r.who)).forEach(r=>{L.push(`${r.time||"--:--"}${r.end?"–"+r.end:""}  ${strip(r.item)}${r.who&&r.who!=="ทุกคน"?" ["+r.who+"]":""}${r.loc?" @ "+r.loc:""}`);if(r.notes)L.push(`      ↳ ${r.notes}`)});
+  const groups=groupsForDay(s),cg=curGroup(groups);const vis=f=>matches(f)&&(!cg||forGroup(f,cg));
+  const trLine=r=>`${r.type==="Flight"?"✈️":"🚐"} ${TT[r.type]||r.type} ${r.from}→${r.to} ${r.dep}${r.arr?"-"+r.arr:""} ${strip(r.no)}${r.driver?" คนขับ "+r.driver+" "+r.driverPhone:""}${r.pickup?" · จุดรับ "+r.pickup:""}`.trim();
+  const itLine=r=>{L.push(`${r.time||"--:--"}${r.end?"–"+r.end:""}  ${strip(r.item)}${r.who&&r.who!=="ทุกคน"?" ["+r.who+"]":""}${r.loc?" @ "+r.loc:""}`);if(r.notes)L.push(`      ↳ ${r.notes}`)};
+  const tr=travelOn(s);
+  if(groups.length&&!cg&&!me()){
+    groups.forEach(g=>{const legs=tr.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));const its=items.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));
+      if(!legs.length&&!its.length)return;L.push("",`${g.icon} ${g.name} (${g.members.join(", ")})`);legs.forEach(r=>L.push(trLine(r)));its.forEach(itLine)});
+    const ct=tr.filter(isC=>isCommon(isC.who)),ci=items.filter(r=>isCommon(r.who));
+    if(ct.length||ci.length){L.push("","🕘 ทุกคน");ct.forEach(r=>L.push(trLine(r)));ci.forEach(itLine)}
+  }else{
+    if(cg)L.push("",`${cg.icon} เฉพาะ${cg.name} (${cg.members.join(", ")})`);
+    tr.filter(r=>vis(r.who)).forEach(r=>L.push(trLine(r)));
+    L.push("","🕘 ตารางเวลา");items.filter(r=>vis(r.who)).forEach(itLine)}
   L.push("","ตารางเต็ม: "+location.href.split("#")[0]+"#d-"+s);const text=L.join("\n");
   const ok=()=>toast("คัดลอกแล้ว วางในกลุ่ม LINE ได้เลย");
   if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text).then(ok,()=>box(text));else box(text);
@@ -606,7 +647,7 @@ function fieldHtml(f,val){
   if(type==="showall") return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}"><option value="">ทุกงาน (ของประจำ)</option>${[...D.Shows].sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`<option value="${esc(s.id)}"${s.id===val?" selected":""}>เฉพาะ ${fShort(s.date)} · ${esc(s.name)}</option>`).join("")}</select></div>`;
   if(type==="show") return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}"><option value="">-</option>${[...D.Shows].sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`<option value="${esc(s.id)}"${s.id===val?" selected":""}>${esc(s.id)} · ${fShort(s.date)} · ${esc(s.name)}</option>`).join("")}</select></div>`;
   if(type.startsWith("sel:")) return `<div class="${cls}"><label for="${id}">${label}</label><select id="${id}" name="${k}">${type.slice(4).split(",").map(o=>`<option value="${o}"${o===val?" selected":""}>${k==="cat"?CATLAB[o]+" ("+o+")":o}</option>`).join("")}</select></div>`;
-  if(type==="who"){const sid=$("#f_showId")?.value||FORM_SHOW;const shw=D.Shows.find(s=>s.id===sid);const pool=shw?crewFor([shw]).list:realCrew();const toks=["ทุกคน","Artist","Band","Crew","Management",...pool.map(c=>c.short||c.name)];
+  if(type==="who"){const sid=$("#f_showId")?.value||FORM_SHOW;const shw=D.Shows.find(s=>s.id===sid);const pool=shw?crewFor([shw]).list:realCrew();const toks=["ทุกคน",...parseGroups(shw?.tgroups).map(g=>g.name),"Artist","Band","Crew","Management",...pool.map(c=>c.short||c.name)];
     const cur=(val||"").split(",").map(s=>s.trim()).filter(Boolean);
     return `<div class="${cls}"><label for="${id}">${label}</label><input id="${id}" name="${k}" value="${esc(val)}" placeholder="ทุกคน" autocomplete="off"><div class="tok" data-for="${id}">${[...new Set(toks)].map(t=>`<button type="button" class="${cur.includes(t)?"on":""}" data-tok="${esc(t)}">${esc(t)}</button>`).join("")}</div></div>`}
   if(type==="crew"){const cur=(val||"").split(",").map(s=>s.trim()).filter(Boolean);
@@ -906,6 +947,7 @@ document.addEventListener("click",e=>{
   const cp=e.target.closest("[data-crewpick]");if(cp){e.stopPropagation();editRecord("Shows",D.Shows[+cp.dataset.crewpick],["crew"]);return}
   const ed=e.target.closest("[data-edit]");if(ed){e.stopPropagation();editRecord(ed.dataset.edit,D[ed.dataset.edit][+ed.dataset.i]);return}
   const ad=e.target.closest("[data-add]");if(ad){e.stopPropagation();addRecord(ad.dataset.add,JSON.parse(ad.dataset.preset||"{}"));return}
+  const tgb=e.target.closest("[data-tg]");if(tgb){GSEL=tgb.dataset.tg;render();return}
   const tk=e.target.closest("[data-tick]");if(tk){e.preventDefault();tk.blur();const [a,b]=tk.dataset.tick.split("|");tickGear(a,b);return}
   const gp=e.target.closest("[data-gphase]");if(gp){GPHASE=gp.dataset.gphase;refreshGear();return}
   const gc=e.target.closest("[data-gcat]");if(gc){const k=gc.dataset.gcat;GOPEN.has(k)?GOPEN.delete(k):GOPEN.add(k);refreshGear();return}
@@ -922,7 +964,7 @@ document.addEventListener("visibilitychange",async()=>{if(document.visibilitySta
 (async()=>{await load();
   const sel=$("#who");sel.innerHTML=`<option value="">ทุกคน</option>`+D.Crew.filter(c=>!/^\(ใส่ชื่อ\)/.test(c.name)).map(c=>`<option value="${esc(c.name)}">${esc(c.short||c.name)} · ${esc(c.role)}</option>`).join("");
   const sv=store.get("pun-who");if(sv&&[...sel.options].some(o=>o.value===sv))sel.value=sv;
-  sel.onchange=()=>{store.set("pun-who",sel.value);render()};
+  sel.onchange=()=>{store.set("pun-who",sel.value);GSEL=null;render()};
   render();setTimeout(maybeInstallBanner,1500)})();
 
 </script>
