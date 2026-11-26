@@ -200,6 +200,20 @@ button.rrow{cursor:pointer;border-color:var(--line)}
 .tgmem{font-size:12.5px;color:var(--muted);margin:-2px 0 10px}
 .tgh{font-size:12px;font-weight:700;margin:10px 0 2px;color:var(--ink)}
 @media print{.tgbar{display:none}}
+.mapbox{margin-top:10px;border-radius:12px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/9;background:var(--panel)}
+.mapbox iframe{width:100%;height:100%;border:0;display:block;filter:grayscale(.85) contrast(1.05)}
+.maprow{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:13.5px}
+.tgbox .tgcard{background:var(--panel);border-radius:12px;padding:10px;margin-top:8px;border:1px solid transparent}
+.tgbox .tgcard.on{border-color:var(--ink)}
+.tgt{font-weight:700}.tgt span{font-weight:500;color:var(--muted);font-size:12.5px}
+.tgm{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.tgm span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:13px;font-weight:600}
+.tgm span small{font-weight:400;color:var(--muted);margin-left:4px;font-size:11px}
+.tgm span.me{background:var(--ink);color:#fff;border-color:var(--ink)}.tgm span.me small{color:#ccc}
+.calltime{display:grid;gap:3px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:14px}
+.tm small.du{opacity:.7;font-size:11px}
+.lc a.pin{white-space:nowrap;font-size:12px}
+@media print{.mapbox{display:none}}
 h2.lh{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0 0 12px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
@@ -437,6 +451,11 @@ const showsOn=s=>D.Shows.filter(x=>x.date===s||(x.endDate&&x.date<=s&&s<=x.endDa
 const travelOn=s=>D.Travel.filter(r=>r.date===s).sort((a,b)=>(mins(a.dep)??9999)-(mins(b.dep)??9999));
 const hotelFor=s=>D.Hotels.find(h=>h.checkin&&h.checkout&&h.checkin<=s&&s<h.checkout);
 function dayKind(s){const sh=showsOn(s).length,tr=travelOn(s).length;return sh&&tr?["both","Travel + Show"]:sh?["show","Show"]:tr?["travel","Travel"]:["off","Off"]}
+const gq=(...a)=>encodeURIComponent(a.filter(Boolean).join(" "));
+const mapEmbed=(q)=>`<div class="mapbox"><iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${q}&z=15&output=embed" title="แผนที่"></iframe></div>`;
+function originFor(s,x){const its=D.Schedule.filter(r=>r.date===s&&r.loc&&/Van|Lobby|Hotel/.test(r.cat)).sort((a,b)=>(mins(a.time)??9999)-(mins(b.time)??9999));
+  const v=(x.venue||"").toLowerCase();const r=its.find(r=>!v||!r.loc.toLowerCase().includes(v));if(r)return r.loc.replace(/^(hotel|โรงแรม)\s*/i,"Hotel ").trim();const h=hotelFor(s);return h?strip(h.name):""}
+const durMin=(a,b)=>{const x=mins(a),y=mins(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d};
 function mapLink(name,map,addr){const q=map||("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([name,addr].filter(Boolean).join(" ")));return `<a href="${esc(q)}" target="_blank" rel="noopener">เปิดแผนที่</a>`}
 const idx=(t,o)=>D[t].indexOf(o);
 const linkify=s=>esc(s).replace(/(https?:\/\/[^\s<]+)/g,u=>`<a href="${u}" target="_blank" rel="noopener">${/maps\.app|goo\.gl\/maps|google\.com\/maps/.test(u)?"แผนที่":"ลิงก์"}</a>`);
@@ -534,19 +553,22 @@ function renderDay(s){
     <div class="sub">${esc([x.venue,x.city].filter(Boolean).join(" · "))}${x.address?"<br>"+esc(x.address):""}</div>
     <div class="sub" style="margin-top:4px">${x.setTime?`ขึ้นโชว์ <b class="mono">${esc(x.setTime)}</b>${x.setLen?" · "+esc(x.setLen)+" นาที":""}`:`<span class="waiting">เวลาโชว์: รอข้อมูล</span>`}</div>
     ${x.others?`<div class="sub">ร่วมเวที: ${esc(x.others)}</div>`:""}${x.contact?`<div class="sub">ผู้ติดต่อ: ${esc(x.contact)} ${esc(x.contactPhone)}</div>`:""}${x.loadIn?`<div class="sub">🚚 จุดโหลด: ${esc(x.loadIn)}</div>`:""}${x.room?`<div class="sub">🚪 ห้องพัก: ${esc(x.room)}</div>`:""}
-    <div class="sub">${mapLink(x.venue||x.name,x.map,[x.address,x.city].join(" "))}</div>${x.notes?`<div class="sub" style="margin-top:4px">${linkify(x.notes)}</div>`:""}</div>`});
+    ${x.notes?`<div class="sub" style="margin-top:4px">${linkify(x.notes)}</div>`:""}
+    ${x.venue?mapEmbed(gq(x.venue,x.address,x.city)):""}
+    <div class="maprow">${mapLink(x.venue||x.name,x.map,[x.address,x.city].join(" "))}${(()=>{const o=originFor(s,x);return o?`<a href="https://www.google.com/maps/dir/?api=1&origin=${gq(o,x.city)}&destination=${gq(x.venue||x.name,x.city)}" target="_blank" rel="noopener">🧭 เส้นทาง ${esc(o)} → ${esc(x.venue||x.name)}</a>`:`<a href="https://www.google.com/maps/dir/?api=1&destination=${gq(x.venue||x.name,x.city)}" target="_blank" rel="noopener">🧭 นำทางไปหน้างาน</a>`})()}</div></div>`});
+  if(groups.length)L+=`<div class="box tgbox"><h3>ทีมเดินทาง</h3>${groups.map(g=>`<div class="tgcard${cg&&cg.name===g.name?" on":""}"><div class="tgt">${g.icon} ${esc(g.name)} <span>${g.members.length} คน</span></div><div class="tgm">${g.members.map(n=>{const p=person(n);return `<span class="${me()&&(p?.name===me()||n===me())?"me":""}">${esc(p?.short||n)}${p?.role?`<small>${esc(p.role.replace(/\s*\(เช็ก\)\s*/g," ").trim())}</small>`:""}</span>`}).join("")}</div></div>`).join("")}</div>`;
   sh.forEach(x=>{const sl=setlistOf(x.id);if(!sl.length&&!editing())return;const songs=sl.filter(r=>r.no).length;
     L+=`<div class="box setlist"><div class="boxhead"><h3>Setlist${sh.length>1?" · "+esc(x.name):""} · ${songs} เพลง</h3>${addBtn("Setlist","+ เพิ่ม",{showId:x.id,seq:nextSeq(x.id)})}</div>${sl.map(r=>r.no?`<div class="sl"><span class="sl-n">${esc(r.no)}</span><span class="sl-s">${esc(r.song)}${r.ver?` <small>${esc(r.ver)}</small>`:""}${r.notes?` <small>· ${esc(r.notes)}</small>`:""}</span>${r.key?`<span class="sl-k">${esc(r.key)}</span>`:""}${edBtn("Setlist",r,"✎")}</div>`:`<div class="sl seg"><span>${/^[—–-]+$/.test(r.song)?"":esc(r.song)}</span>${edBtn("Setlist",r,"✎")}</div>`).join("")||'<div class="sub">ยังไม่มีลิสต์เพลง</div>'}</div>`});
   L+=`<div class="box travel"><div class="boxhead"><h3>Travel</h3>${addBtn("Travel","+ เพิ่ม",{date:s,showId})}</div>`;
-  const legHtml=r=>`<div class="leg"><div class="boxhead"><span><b>${esc(strip(r.no)||TT[r.type]||r.type)}</b> <span class="sub">${esc(TT[r.type]||r.type)}</span></span>${edBtn("Travel",r)}</div><span class="mono">${esc(r.from)} ${esc(r.dep)} → ${esc(r.to)} ${esc(r.arr)}</span> · ${esc(r.who||"ทุกคน")}${r.driver?`<br><span class="sub">คนขับ ${esc(r.driver)} ${esc(r.driverPhone)}</span>`:""}${r.pickup?`<br><span class="sub">จุดรับ: ${esc(r.pickup)}</span>`:""}</div>`;
+  const legHtml=r=>`<div class="leg"><div class="boxhead"><span><b>${esc(strip(r.no)||TT[r.type]||r.type)}</b> <span class="sub">${esc(TT[r.type]||r.type)}</span></span>${edBtn("Travel",r)}</div><span class="mono">${esc(r.from)} ${esc(r.dep)} → ${esc(r.to)} ${esc(r.arr)}</span>${durMin(r.dep,r.arr)?` <span class="sub">(${dur(durMin(r.dep,r.arr))})</span>`:""} · ${esc(r.who||"ทุกคน")}${r.driver?`<br><span class="sub">คนขับ ${esc(r.driver)} ${esc(r.driverPhone)}</span>`:""}${r.pickup?`<br><span class="sub">จุดรับ: ${esc(r.pickup)}</span>`:""}</div>`;
   if(tr.length){L+=`<div class="big">${tr.length} เที่ยว${cg?" · "+cg.icon+" "+esc(cg.name):""}</div>`;
-    if(groups.length&&!cg){const used=new Set();groups.forEach(g=>{const legs=tr.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));legs.forEach(r=>used.add(r));if(legs.length)L+=`<div class="tgh">${g.icon} ${esc(g.name)}</div>`+legs.map(legHtml).join("")});
+    if(groups.length&&!cg){const used=new Set();groups.forEach(g=>{const legs=tr.filter(r=>!isCommon(r.who)&&forGroup(r.who,g));legs.forEach(r=>used.add(r));if(legs.length)L+=`<div class="tgh">${g.icon} ${esc(g.name)} <span class="sub">· ${esc(g.members.join(", "))}</span></div>`+legs.map(legHtml).join("")});
       const rest=tr.filter(r=>!used.has(r));if(rest.length)L+=`<div class="tgh">👥 ทุกคน</div>`+rest.map(legHtml).join("")}
     else L+=tr.map(legHtml).join("")}
   else L+=`<div class="sub">${cg?"ทีมนี้ไม่มีการเดินทางวันนี้":"ไม่มีการเดินทางวันนี้"}</div>`;
   L+=`</div>`;
   const ht=hotelFor(s);
-  L+=`<div class="box hotel"><div class="boxhead"><h3>Hotel tonight</h3>${ht?edBtn("Hotels",ht):addBtn("Hotels","+ เพิ่ม",{checkin:s,showId})}</div>${ht?`<div class="big">${esc(strip(ht.name))}</div><div class="sub">${esc(ht.address)}</div>${ht.phone?`<div class="sub">โทร: ${esc(ht.phone)}</div>`:""}${ht.rooms?`<div class="sub">${esc(ht.rooms)}</div>`:""}<div class="sub">${mapLink(ht.name,ht.map,ht.address)}</div>`:`<div class="sub">${sh.length?'<span class="waiting">รอข้อมูล</span> หรือไม่ได้ค้างคืน':"ไม่มี"}</div>`}</div>`;
+  L+=`<div class="box hotel"><div class="boxhead"><h3>Hotel tonight</h3>${ht?edBtn("Hotels",ht):addBtn("Hotels","+ เพิ่ม",{checkin:s,showId})}</div>${ht?`<div class="big">${esc(strip(ht.name))}</div><div class="sub">${esc(ht.address)}</div>${ht.phone?`<div class="sub">โทร: ${esc(ht.phone)}</div>`:""}${ht.rooms?`<div class="sub">${esc(ht.rooms)}</div>`:""}${mapEmbed(gq(strip(ht.name),ht.address))}<div class="maprow">${mapLink(ht.name,ht.map,ht.address)}</div>`:`<div class="sub">${sh.length?'<span class="waiting">รอข้อมูล</span> หรือไม่ได้ค้างคืน':"ไม่มี"}</div>`}</div>`;
   const links=D.Links.filter(l=>sh.some(x=>x.id===l.showId));
   if(links.length)L+=`<div class="box"><h3>Docs</h3>${links.map(l=>`<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(l.label)}</span>${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">เปิด</a>`:`<span class="waiting">รอลิงก์</span>`}</div>`).join("")}</div>`;
   const cf=crewFor(sh);
@@ -556,6 +578,12 @@ function renderDay(s){
   const items=D.Schedule.filter(r=>r.date===s).sort((a,b)=>(mins(a.time)??9999)-(mins(b.time)??9999));
   const mine=items.filter(r=>vis(r.who));
   L+=`<section class="sched"><div class="hd"><b>ตาราง${kl==="Off"?"":" "+kl+" day"}</b><span>${mine.length} รายการ${me()?" ของ "+esc(person(me())?.short||me()):cg?" ของ "+esc(cg.name):""} ${addBtn("Schedule","+ เพิ่มคิว",{date:s,showId})}</span></div>`;
+  if(items.length){const first=f=>items.find(r=>mins(r.time)!=null&&f(r));const ct=[];
+    if(groups.length)groups.forEach(g=>{const r=first(r=>!isCommon(r.who)&&forGroup(r.who,g))||first(r=>forGroup(r.who,g));if(r)ct.push(`${g.icon} ${esc(g.name)} เริ่ม <b>${esc(r.time)}</b> ${esc(strip(r.item))}`)});
+    else{const r=first(()=>true);if(r)ct.push(`เริ่ม <b>${esc(r.time)}</b> ${esc(strip(r.item))}`)}
+    const sc=first(r=>r.cat==="Soundcheck");if(sc)ct.push(`🎚 ซาวด์เช็ก <b>${esc(sc.time)}</b>`);
+    const so=sh.find(x=>x.setTime);if(so)ct.push(`🎤 โชว์ <b>${esc(so.setTime)}</b>${so.setLen?" · "+esc(so.setLen)+" นาที":""}`);
+    if(ct.length)L+=`<div class="calltime">${ct.map(x=>`<div>${x}</div>`).join("")}</div>`}
   if(groups.length)L+=`<div class="tgbar" role="tablist"><button type="button" data-tg="" aria-selected="${!cg}">ทั้งหมด</button>${groups.map(g=>`<button type="button" data-tg="${esc(g.name)}" aria-selected="${cg?.name===g.name}">${g.icon} ${esc(g.name)} <span>${g.members.length}</span></button>`).join("")}</div>${cg?`<div class="tgmem">${cg.icon} ${esc(cg.name)}: ${esc(cg.members.join(", "))}</div>`:""}`;
   if(!items.length)L+=`<div class="empty">ยังไม่มีตารางเวลาของวันนี้<br>${LIVE?"กด ✎ แก้ไข แล้ว + เพิ่มคิว":"เพิ่มได้ในแท็บ Schedule ของ Google Sheet"}</div>`;
   else{
@@ -566,13 +594,13 @@ function renderDay(s){
       const ok=vis(r.who);
       if(prev&&ok&&m!=null){const g=m-prev.m;if(g>=60)L+=`<div class="gap">อีก ${dur(g)} ถึง ${esc(strip(r.item))}</div>`}
       const ppl=(r.who||"").split(",").map(x=>x.trim()).filter(Boolean);
-      L+=`<div class="mo c-${esc(CATS.includes(r.cat)?r.cat:"Other")}${ok?"":" dim"}"><div class="tm">${esc(r.time||"–")}${r.end?`<small>ถึง ${esc(r.end)}</small>`:""}</div>
-        <div><div class="ti">${esc(strip(r.item))}</div>${r.loc?`<div class="lc">${linkify(r.loc)}</div>`:""}${r.notes?`<div class="lc">${linkify(r.notes)}</div>`:""}
+      L+=`<div class="mo c-${esc(CATS.includes(r.cat)?r.cat:"Other")}${ok?"":" dim"}"><div class="tm">${esc(r.time||"–")}${r.end?`<small>ถึง ${esc(r.end)}</small>`:""}${durMin(r.time,r.end)?`<small class="du">${dur(durMin(r.time,r.end))}</small>`:""}</div>
+        <div><div class="ti">${esc(strip(r.item))}</div>${r.loc?`<div class="lc">${linkify(r.loc)}${/https?:/.test(r.loc)?"":` <a class="pin" href="https://www.google.com/maps/search/?api=1&query=${gq(r.loc,sh[0]?.city)}" target="_blank" rel="noopener">📍 แผนที่</a>`}</div>`:""}${r.notes?`<div class="lc">${linkify(r.notes)}</div>`:""}
         <div class="ppl">${ppl.map(x=>`<span class="${isMeTok(x)?"me":""}">${esc(x)}</span>`).join("")}</div></div>
         <div class="side-col"><span class="tag">${esc(CATLAB[r.cat]||r.cat||"อื่นๆ")}</span>${edBtn("Schedule",r)}</div></div>`;
       if(ok&&m!=null)prev={m:mins(r.end)??m}});
   }
-  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v19</div>`;
+  L+=`</section>${gearBox(sh)}</div><div class="foot">${esc(SOURCE)} · v20</div>`;
   $("#app").innerHTML=L;
   $("#copyBtn").onclick=()=>copyDay(s,sh,items);
   $("#printBtn").onclick=()=>{const t=document.title;document.title=printTitle();try{window.print()}catch(e){}setTimeout(()=>{document.title=t},1000)};
